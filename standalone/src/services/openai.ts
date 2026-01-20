@@ -44,10 +44,13 @@ async function generateProductScenePrompt(
 ): Promise<string> {
   // 构建产品信息
   let productInfo = '';
-  if (context.productName) {
-    productInfo = `Product: ${context.productName}`;
-    if (context.productCategory) {
-      productInfo += ` (${context.productCategory})`;
+  if (context.productName || context.productCategory) {
+    if (context.productName && context.productCategory) {
+      productInfo = `Product: ${context.productName} (${context.productCategory})`;
+    } else if (context.productName) {
+      productInfo = `Product: ${context.productName}`;
+    } else if (context.productCategory) {
+      productInfo = `Product category: ${context.productCategory}`;
     }
   }
 
@@ -67,12 +70,12 @@ QUALITY RULES:
 4. Props and background must be RELEVANT to the product category
 5. Professional photography quality - good lighting, composition, depth
 
-IMPORTANT: Match the scene to the product type!
-- Fashion/clothing → fabric textures, lifestyle settings, fashion photography
-- Electronics → clean surfaces, tech aesthetic, minimal
-- Beauty/skincare → soft tones, marble/glass, bathroom/vanity vibes
-- Food → kitchen, table settings, appetizing atmosphere
-- Furniture → room settings, interior design aesthetic
+CRITICAL: The scene MUST match the product category and the product itself!
+- Analyze the product category and design a scene that makes sense for that specific type of product
+- Props, background, and atmosphere should all be RELEVANT to what the product is
+- Think about where this product would naturally be used or displayed
+- If there's no product information provided, just extract the product from the source image. 
+- If it's outdoor gear → outdoor setting. If it's home decor → home setting. And so on.
 
 Output a scene description (max 25 words). Be specific about: surface, props, lighting, mood.`;
 
