@@ -113,46 +113,55 @@ Design a premium showcase scene for this product:`;
 }
 
 /**
- * Banner 图：只生成风格/色调调整描述，不改变场景内容
+ * Banner 图：基于原图风格和构图，创意重构
+ * 可以改变结构，但要保持原图的视觉语言和品牌调性
  */
 async function generateBannerStylePrompt(
   client: OpenAI,
   context: UserContext,
   styleHint: string
 ): Promise<string> {
-  const systemPrompt = `You are a photo editor specializing in color grading and mood enhancement.
+  const systemPrompt = `You are a creative director reimagining hero banners for e-commerce brands.
 
-Your task: Generate a COLOR GRADING and LIGHTING style description for a banner image.
+Your task: Describe a NEW banner design that draws inspiration from the original image's style, composition, and visual language.
 
-CRITICAL RULES:
-1. DO NOT describe any new objects, people, or scene elements
-2. ONLY describe: color tones, lighting style, mood, atmosphere, contrast
-3. The original image content must stay EXACTLY as is
-4. Think of this like applying a Lightroom preset or Instagram filter
+CREATIVE APPROACH:
+1. LEARN from the original: its color palette, composition style, visual elements, brand vibe
+2. REIMAGINE with the new context: adapt to the audience, time, season, campaign theme
+3. CREATE a fresh version that feels like a natural evolution, not a copy
+
+WHAT YOU CAN DO:
+- Change the overall composition and layout
+- Add or modify environmental elements
+- Adjust lighting, atmosphere, and mood dramatically
+- Introduce new props or background elements that fit the brand
+- Shift the visual style while keeping brand consistency
+
+QUALITY STANDARDS:
+- Premium advertising quality (think Nike, Apple campaigns)
+- Cinematic and aspirational
+- Must feel cohesive with the brand's visual identity
+- Professional photography aesthetic
 
 GOOD examples:
-- "Warm golden tones, soft contrast, cozy inviting atmosphere"
-- "Cool blue undertones, crisp lighting, modern professional feel"
-- "Rich saturated colors, dramatic shadows, bold confident mood"
-- "Soft pastel tones, airy light, fresh spring vibes"
-- "Moody dark tones, cinematic contrast, premium luxury feel"
+- "Reimagine as a dramatic sunrise scene, golden light streaming through, same bold typography style, fresh energetic mood"
+- "Transform into an urban nightscape, city lights bokeh, modern sleek aesthetic, keep the dynamic diagonal composition"
+- "Evolve into a cozy winter setting, warm fireplace glow, soft textures, maintain the lifestyle aspirational feel"
 
-BAD examples:
-- "Add flowers and fruits" ❌ (adding objects)
-- "Place on marble table" ❌ (changing scene)
-- "Person walking in background" ❌ (adding elements)
+Output a creative direction (max 30 words). Be specific about: atmosphere, lighting, composition style, mood.`;
 
-Output ONLY color/lighting/mood description (max 15 words).`;
-
-  // 解析广告内容主题
+  // 解析广告内容主题和地区
   const adTheme = parseAdTheme(context.utmContent);
+  const regionHint = parseRegion(context.utmTerm);
 
   const userPrompt = `Time: ${context.timeOfDay}
 Season: ${context.season}
-Target mood: ${styleHint}
-${adTheme ? `Ad theme: ${adTheme}` : ''}
+Target audience: ${styleHint}
+${adTheme ? `Campaign theme: ${adTheme}` : ''}
+${regionHint ? `Regional vibe: ${regionHint}` : ''}
+${context.utmCampaign ? `Campaign: ${context.utmCampaign.replace(/[_|+]/g, ' ')}` : ''}
 
-Describe a color grading style:`;
+Reimagine this banner with a fresh creative direction:`;
 
   try {
     const response = await client.chat.completions.create({
@@ -181,10 +190,10 @@ Describe a color grading style:`;
  */
 function generateBannerFallbackPrompt(context: UserContext): string {
   const styleMap: Record<string, string> = {
-    morning: 'Soft warm light, fresh tones, gentle contrast',
-    afternoon: 'Bright natural lighting, vibrant colors, clean look',
-    evening: 'Golden warm tones, cozy atmosphere, soft shadows',
-    night: 'Cool elegant tones, subtle contrast, sophisticated mood',
+    morning: 'Fresh morning atmosphere, soft golden sunrise light, energetic and inspiring mood, clean modern composition',
+    afternoon: 'Bright vibrant scene, dynamic natural lighting, bold confident aesthetic, lifestyle aspirational feel',
+    evening: 'Warm golden hour glow, cozy inviting atmosphere, premium lifestyle mood, cinematic depth',
+    night: 'Sophisticated urban nightscape, elegant ambient lighting, modern luxury feel, dramatic contrast',
   };
   return styleMap[context.timeOfDay] || styleMap.afternoon;
 }

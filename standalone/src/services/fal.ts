@@ -48,6 +48,7 @@ export async function generateProductBackground(
             input: {
                 prompt: fullPrompt,
                 image_urls: [input.imageUrl],
+                output_format: 'webp',  // WebP 格式，文件更小加载更快
             },
             logs: true,
             onQueueUpdate: (update) => {
@@ -105,12 +106,11 @@ You CAN freely adjust: product position, size, angle, background, scene composit
 Scene design: ${basePrompt}
 Quality: High-end e-commerce photography, luxury brand aesthetic.`;
     } else {
-        // Banner 图：只做色调/光影调整，保持原有内容不变
-        return `Apply color grading and lighting enhancement to this image.
-IMPORTANT: Keep ALL original content exactly as is (people, objects, composition, layout).
-DO NOT add, remove, or change any elements in the image.
-ONLY adjust: ${basePrompt}
-Style: Professional advertising photography, premium brand aesthetic.`;
+        // Banner 图：基于原图风格创意重构
+        return `Reimagine this banner image with a fresh creative direction.
+Learn from the original: its visual style, color palette, brand aesthetic.
+Create a new version: ${basePrompt}
+Quality: Cinematic advertising photography, premium brand campaign aesthetic.`;
     }
 }
 
