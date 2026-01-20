@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Visual Generator - Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+    }
+    
+    .test-section {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #ccc;
+    }
+    
+    .test-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    
+    .test-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: #2a2a2a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    .test-link:hover {
+      background: #333;
+      border-color: #555;
+    }
+    
+    .test-link.instagram { border-left: 3px solid #E4405F; }
+    .test-link.tiktok { border-left: 3px solid #00f2ea; }
+    .test-link.facebook { border-left: 3px solid #1877F2; }
+    .test-link.google { border-left: 3px solid #4285F4; }
+    .test-link.direct { border-left: 3px solid #888; }
+    
+    .demo-images {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .image-card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .image-card img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+    }
+    
+    .image-card .label {
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #888;
+    }
+    
+    .current-context {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .context-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .context-item {
+      background: #2a2a2a;
+      padding: 0.75rem;
+      border-radius: 8px;
+    }
+    
+    .context-item .label {
+      font-size: 0.75rem;
+      color: #888;
+      margin-bottom: 0.25rem;
+    }
+    
+    .context-item .value {
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .api-test {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .api-form {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .api-form input {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.75rem 1rem;
+      background: #2a2a2a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    
+    .api-form button {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .api-form button:hover {
+      opacity: 0.9;
+    }
+    
+    .api-form button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #2a2a2a;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .result-image {
+      margin-top: 1rem;
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    
+    .image-card.selectable {
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    
+    .image-card.selectable:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+    }
+    
+    .image-card.selectable.selected {
+      border-color: #667eea;
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .image-card.wide img {
+      height: 180px;
+    }
+    
+    .selected-info {
+      background: #2a2a2a;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .selected-info .type-badge {
+      background: #667eea;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .context-selectors {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    
+    .selector-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .selector-group label {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    .selector-group select {
+      padding: 0.75rem 1rem;
+      background: #2a2a2a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+    }
+    
+    .selector-group select:hover {
+      border-color: #555;
+    }
+    
+    .selector-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI Visual Generator</h1>
+    <p class="subtitle">Test different traffic sources and see how images are generated</p>
+    
+    <!-- Context Selection -->
+    <div class="test-section">
+      <h2>Configure Context</h2>
+      <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
+        Select traffic source and campaign to test different styles:
+      </p>
+      <div class="context-selectors">
+        <div class="selector-group">
+          <label>UTM Source</label>
+          <select id="utm-source" onchange="updateContext()">
+            <option value="">Direct (no UTM)</option>
+            <option value="instagram">📸 Instagram</option>
+            <option value="tiktok">🎵 TikTok</option>
+            <option value="facebook">👍 Facebook</option>
+            <option value="google">🔍 Google</option>
+          </select>
+        </div>
+        <div class="selector-group">
+          <label>UTM Campaign</label>
+          <select id="utm-campaign" onchange="updateContext()">
+            <option value="">No Campaign</option>
+            <option value="summer_collection">☀️ Summer Collection</option>
+            <option value="winter_sale">❄️ Winter Sale</option>
+            <option value="trending_style">🔥 Trending Style</option>
+            <option value="new_arrivals">✨ New Arrivals</option>
+            <option value="flash_sale">⚡ Flash Sale</option>
+            <option value="holiday_gift">🎁 Holiday Gift</option>
+          </select>
+        </div>
+        <div class="selector-group">
+          <label>Time of Day</label>
+          <select id="time-of-day" onchange="updateContext()">
+            <option value="auto">🕐 Auto (current time)</option>
+            <option value="morning">🌅 Morning</option>
+            <option value="afternoon">☀️ Afternoon</option>
+            <option value="evening">🌇 Evening</option>
+            <option value="night">🌙 Night</option>
+          </select>
+        </div>
+        <div class="selector-group">
+          <label>Season</label>
+          <select id="season" onchange="updateContext()">
+            <option value="auto">📅 Auto (current season)</option>
+            <option value="spring">🌸 Spring</option>
+            <option value="summer">☀️ Summer</option>
+            <option value="autumn">🍂 Autumn</option>
+            <option value="winter">❄️ Winter</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Current Context -->
+    <div class="current-context">
+      <h2>Current Context (Detected)</h2>
+      <div class="context-grid" id="context-grid">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+    
+    <!-- API Test -->
+    <div class="api-test">
+      <h2>Generate AI Image</h2>
+      <div class="selected-info" id="selected-info" style="display: none;">
+        <span>Selected:</span>
+        <span class="type-badge" id="selected-type">product</span>
+        <span id="selected-name" style="color: #ccc;"></span>
+      </div>
+      <div class="api-form">
+        <input type="text" id="image-url" placeholder="Enter image URL or select from above..." 
+               value="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800">
+        <input type="hidden" id="image-type" value="product">
+        <button id="generate-btn" onclick="testGenerate()">Generate</button>
+      </div>
+      <div class="result" id="result" style="display: none;"></div>
+      <img class="result-image" id="result-image" style="display: none;">
+    </div>
+    
+    <!-- Image Selection -->
+    <div class="test-section">
+      <h2>Select Test Image</h2>
+      <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
+        Click an image to select it for testing:
+      </p>
+      
+      <h3 style="color: #888; font-size: 0.9rem; margin: 1rem 0 0.5rem;">Product Images</h3>
+      <div class="demo-images" style="margin-top: 0.5rem;">
+        <div class="image-card selectable" onclick="selectImage(this, 'product')">
+          <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400" alt="Watch">
+          <div class="label">⌚ Watch</div>
+        </div>
+        <div class="image-card selectable" onclick="selectImage(this, 'product')">
+          <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" alt="Sneaker">
+          <div class="label">👟 Sneaker</div>
+        </div>
+        <div class="image-card selectable" onclick="selectImage(this, 'product')">
+          <img src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=400" alt="Skincare">
+          <div class="label">🧴 Skincare</div>
+        </div>
+        <div class="image-card selectable" onclick="selectImage(this, 'product')">
+          <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400" alt="Headphones">
+          <div class="label">🎧 Headphones</div>
+        </div>
+        <div class="image-card selectable" onclick="selectImage(this, 'product')">
+          <img src="https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400" alt="Sunglasses">
+          <div class="label">🕶️ Sunglasses</div>
+        </div>
+        <div class="image-card selectable" onclick="selectImage(this, 'product')">
+          <img src="https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400" alt="Bag">
+          <div class="label">👜 Handbag</div>
+        </div>
+      </div>
+      
+      <h3 style="color: #888; font-size: 0.9rem; margin: 1.5rem 0 0.5rem;">Banner / Hero Images</h3>
+      <div class="demo-images" style="margin-top: 0.5rem;">
+        <div class="image-card selectable wide" onclick="selectImage(this, 'banner')">
+          <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800" alt="Store">
+          <div class="label">🏬 Fashion Store</div>
+        </div>
+        <div class="image-card selectable wide" onclick="selectImage(this, 'banner')">
+          <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800" alt="Shopping">
+          <div class="label">🛍️ Shopping</div>
+        </div>
+        <div class="image-card selectable wide" onclick="selectImage(this, 'banner')">
+          <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800" alt="Fashion">
+          <div class="label">👗 Fashion</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Get auto-detected time of day
+    function getAutoTimeOfDay() {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) return 'morning';
+      if (hour >= 12 && hour < 17) return 'afternoon';
+      if (hour >= 17 && hour < 21) return 'evening';
+      return 'night';
+    }
+    
+    // Get auto-detected season
+    function getAutoSeason() {
+      const month = new Date().getMonth();
+      if (month >= 2 && month <= 4) return 'spring';
+      if (month >= 5 && month <= 7) return 'summer';
+      if (month >= 8 && month <= 10) return 'autumn';
+      return 'winter';
+    }
+    
+    // Get current context from selectors
+    function getCurrentContext() {
+      const utmSource = document.getElementById('utm-source').value;
+      const utmCampaign = document.getElementById('utm-campaign').value;
+      const timeOfDaySelect = document.getElementById('time-of-day').value;
+      const seasonSelect = document.getElementById('season').value;
+      
+      return {
+        utmSource: utmSource || undefined,
+        utmCampaign: utmCampaign || undefined,
+        timeOfDay: timeOfDaySelect === 'auto' ? getAutoTimeOfDay() : timeOfDaySelect,
+        season: seasonSelect === 'auto' ? getAutoSeason() : seasonSelect,
+      };
+    }
+    
+    // Display current context
+    function displayContext() {
+      const ctx = getCurrentContext();
+      
+      const context = {
+        'UTM Source': ctx.utmSource || '(none)',
+        'UTM Campaign': ctx.utmCampaign || '(none)',
+        'Time of Day': ctx.timeOfDay,
+        'Season': ctx.season,
+        'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+      
+      const grid = document.getElementById('context-grid');
+      grid.innerHTML = Object.entries(context).map(([label, value]) => `
+        <div class="context-item">
+          <div class="label">${label}</div>
+          <div class="value">${value}</div>
+        </div>
+      `).join('');
+    }
+    
+    // Update context when selectors change
+    function updateContext() {
+      displayContext();
+    }
+    
+    // Select image from gallery
+    function selectImage(card, imageType) {
+      // Remove previous selection
+      document.querySelectorAll('.image-card.selected').forEach(el => {
+        el.classList.remove('selected');
+      });
+      
+      // Select this one
+      card.classList.add('selected');
+      
+      // Get image URL (use higher resolution)
+      const img = card.querySelector('img');
+      const imgUrl = img.src.replace('w=400', 'w=800');
+      const imgName = card.querySelector('.label').textContent;
+      
+      // Update form
+      document.getElementById('image-url').value = imgUrl;
+      document.getElementById('image-type').value = imageType;
+      
+      // Show selected info
+      const selectedInfo = document.getElementById('selected-info');
+      selectedInfo.style.display = 'flex';
+      document.getElementById('selected-type').textContent = imageType;
+      document.getElementById('selected-name').textContent = imgName;
+    }
+    
+    // Test API directly
+    async function testGenerate() {
+      const btn = document.getElementById('generate-btn');
+      const imageUrl = document.getElementById('image-url').value;
+      const imageType = document.getElementById('image-type').value;
+      const resultDiv = document.getElementById('result');
+      const resultImg = document.getElementById('result-image');
+      
+      if (!imageUrl) {
+        alert('Please enter an image URL or select from above');
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Calling API...';
+      resultImg.style.display = 'none';
+      
+      try {
+        const ctx = getCurrentContext();
+        const now = new Date();
+        
+        const response = await fetch('http://localhost:3000/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl,
+            imageType,
+            utmSource: ctx.utmSource,
+            utmCampaign: ctx.utmCampaign,
+            timeOfDay: ctx.timeOfDay,
+            season: ctx.season,
+            clientTime: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          }),
+        });
+        
+        const data = await response.json();
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success && data.imageUrl) {
+          resultImg.src = data.imageUrl;
+          resultImg.style.display = 'block';
+        }
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+      }
+    }
+    
+    // Init
+    displayContext();
+  </script>
+</body>
+</html>
+
