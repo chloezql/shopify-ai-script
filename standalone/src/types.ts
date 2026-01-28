@@ -26,7 +26,7 @@ export type Temperature = 'hot' | 'warm' | 'cool' | 'cold';
 /**
  * Image type being processed
  */
-export type ImageType = 'product' | 'banner';
+export type ImageType = 'product' | 'banner' | 'collection' | 'imageWithText';
 
 /**
  * User context collected from frontend
@@ -62,6 +62,12 @@ export interface UserContext {
   productName?: string;
   productDescription?: string;
   productCategory?: string;
+
+  // Collection info (for collection images)
+  collectionTitle?: string;
+  collectionDescription?: string;
+  productNames?: string[];  // Products in the collection
+  productCount?: number;
 }
 
 /**
@@ -75,6 +81,12 @@ export interface GenerateRequest {
   productName?: string;
   productDescription?: string;
   productCategory?: string;
+
+  // Collection info (for collection images)
+  collectionTitle?: string;
+  collectionDescription?: string;
+  productNames?: string[];
+  productCount?: number;
 
   // UTM parameters
   utmSource?: string;

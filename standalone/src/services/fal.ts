@@ -99,7 +99,8 @@ export async function generateProductBackground(
  * 根据图片类型构建不同的 prompt
  * 
  * 产品图：可以自由设计场景，但产品本身不变
- * Banner 图：只做色调/风格调整，不改变场景内容
+ * Banner / ImageWithText：基于原图风格创意重构
+ * Collection：展示系列整体氛围，利用 collection 信息
  */
 function buildPrompt(basePrompt: string, imageType: ImageType): string {
     if (imageType === 'product') {
@@ -114,6 +115,16 @@ SCENE REQUIREMENTS:
 ${basePrompt}
 
 QUALITY: High-end e-commerce photography, luxury brand aesthetic.`;
+    } else if (imageType === 'collection') {
+        // Collection 图：展示系列的整体感
+        return `Transform this collection hero image.
+
+REQUIREMENTS:
+- Maintain the products' visual identity
+- Create a cohesive scene that represents the collection theme
+- ${basePrompt}
+
+QUALITY: Premium lifestyle photography, curated collection aesthetic.`;
     } else {
         // Banner 图：基于原图风格创意重构
         return `Reimagine this banner image with a fresh creative direction.

@@ -27,8 +27,12 @@ export async function generateScenePrompt(context: UserContext): Promise<string>
   const imageType = context.imageType || 'product';
 
   // 根据图片类型选择不同的 prompt 策略
-  if (imageType === 'banner') {
+  if (imageType === 'banner' || imageType === 'imageWithText') {
+    // Banner 和 Image with Text 使用相同的 prompt 策略
     return generateBannerStylePrompt(client, context, styleHint);
+  } else if (imageType === 'collection') {
+    // Collection 有专门的 prompt，利用 collection 信息
+    return generateCollectionPrompt(client, context, styleHint);
   } else {
     return generateProductScenePrompt(client, context, styleHint);
   }
@@ -361,3 +365,77 @@ function generateFallbackPrompt(context: UserContext): string {
 
   return `${sceneMap[context.timeOfDay]}, ${seasonMood[context.season]}`;
 }
+
+/**
+ * Collection 图片：展示系列/集合的整体氛围
+ * 利用 collection 信息和包含的产品来生成更相关的场景
+ */
+async function generateCollectionPrompt(
+  client: OpenAI,
+  context: UserContext,
+  styleHint: string
+): Promise<string> {
+  // 构建 collection 信息
+  let collectionInfo = '';
+  if (context.collectionTitle) {
+    collectionInfo += `Collection: "${context.collectionTitle}"`;
+  }
+  if (context.collectionDescription) {
+    collectionInfo += `\nDescription: ${context.collectionDescription.slice(0, 150)}`;
+  }
+  if (context.productNames && context.productNames.length > 0) {
+    collectionInfo += `\nProducts in this collection: ${context.productNames.join(', ')}`;
+  }
+  if (context.productCount) {
+    collectionInfo += ` (${context.productCount} products total)`;
+  }
+
+  const utmInfo = formatUtmInfo(context);
+
+  const systemPrompt = `You are a creative director for premium PET PRODUCT e-commerce.
+
+Your task: Generate a cohesive visual prompt for a COLLECTION hero image.
+
+## COLLECTION INFO
+${collectionInfo || 'General pet products collection'}
+
+## UTM & AUDIENCE CONTEXT
+${utmInfo}
+
+## REQUIREMENTS
+1. Create a lifestyle scene that represents the ENTIRE collection theme
+2. Show multiple products or a curated arrangement that suggests variety
+3. Include relevant pets based on UTM keywords or collection theme
+4. Maintain brand consistency with premium aesthetic
+5. The image should tell a story about the collection's purpose
+
+## OUTPUT FORMAT
+Generate a single cohesive prompt (2-3 sentences) describing:
+- The overall scene composition
+- The mood and atmosphere matching the collection theme
+- Relevant pet presence (based on UTM or collection context)
+- ${styleHint} aesthetic`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Generate a collection hero image prompt for this ${context.season} ${context.timeOfDay} scene.` }
+      ],
+      max_tokens: 200,
+      temperature: 0.8,
+    });
+
+    return completion.choices[0]?.message?.content?.trim() || generateCollectionFallback(context);
+  } catch (error) {
+    console.error('[OpenAI] Collection prompt error:', error);
+    return generateCollectionFallback(context);
+  }
+}
+
+function generateCollectionFallback(context: UserContext): string {
+  const title = context.collectionTitle || 'premium pet products';
+  return `Elegant flat lay arrangement showcasing ${title} collection, with curious pet peeking into frame, ${context.season} ${context.timeOfDay} lighting, premium lifestyle photography`;
+}
+
