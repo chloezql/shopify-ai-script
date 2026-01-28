@@ -1,563 +1,631 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Visual Generator - Demo</title>
+  <title>UTM Demo</title>
   <style>
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
-    
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0a0a;
-      color: #e5e5e5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #fafafa;
+      color: #262626;
       min-height: 100vh;
-      padding: 2rem;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .subtitle {
-      color: #888;
-      margin-bottom: 2rem;
-    }
-    
-    .test-section {
-      background: #1a1a1a;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    h2 {
-      font-size: 1.2rem;
-      margin-bottom: 1rem;
-      color: #ccc;
-    }
-    
-    .test-links {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-    }
-    
-    .test-link {
-      display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.25rem;
-      background: #2a2a2a;
-      border: 1px solid #333;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .demo-layout {
+      display: grid;
+      grid-template-columns: auto 320px;
+      gap: 40px;
+      align-items: center;
+    }
+
+    /* ===== Left: Carousel ===== */
+    .carousel-container {
+      position: relative;
+      width: 340px;
+    }
+
+    .carousel-viewport {
+      overflow: hidden;
       border-radius: 8px;
-      color: #fff;
-      text-decoration: none;
-      font-size: 0.9rem;
+    }
+
+    .carousel-track {
+      display: flex;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .carousel-slide {
+      flex: 0 0 100%;
+    }
+
+    /* Nav Buttons */
+    .carousel-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .carousel-nav:hover {
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .carousel-nav:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: translateY(-50%);
+    }
+
+    .carousel-nav svg {
+      width: 18px;
+      height: 18px;
+      color: #262626;
+    }
+
+    .carousel-prev {
+      left: -18px;
+    }
+
+    .carousel-next {
+      right: -18px;
+    }
+
+    /* Dots */
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .carousel-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #c7c7c7;
+      border: none;
+      padding: 0;
+      cursor: pointer;
       transition: all 0.2s;
     }
-    
-    .test-link:hover {
-      background: #333;
-      border-color: #555;
+
+    .carousel-dot.active {
+      background: #0095f6;
+      width: 18px;
+      border-radius: 3px;
     }
-    
-    .test-link.instagram { border-left: 3px solid #E4405F; }
-    .test-link.tiktok { border-left: 3px solid #00f2ea; }
-    .test-link.facebook { border-left: 3px solid #1877F2; }
-    .test-link.google { border-left: 3px solid #4285F4; }
-    .test-link.direct { border-left: 3px solid #888; }
-    
-    .demo-images {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
-    
-    .image-card {
-      background: #1a1a1a;
-      border-radius: 12px;
+
+    /* ===== Instagram Post ===== */
+    .ig-post {
+      background: #fff;
+      border: 1px solid #dbdbdb;
+      border-radius: 8px;
       overflow: hidden;
     }
-    
-    .image-card img {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-    }
-    
-    .image-card .label {
-      padding: 1rem;
-      font-size: 0.9rem;
-      color: #888;
-    }
-    
-    .current-context {
-      background: #1a1a1a;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-top: 2rem;
-    }
-    
-    .context-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    
-    .context-item {
-      background: #2a2a2a;
-      padding: 0.75rem;
-      border-radius: 8px;
-    }
-    
-    .context-item .label {
-      font-size: 0.75rem;
-      color: #888;
-      margin-bottom: 0.25rem;
-    }
-    
-    .context-item .value {
-      font-weight: 600;
-      color: #fff;
-    }
-    
-    .api-test {
-      background: #1a1a1a;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-top: 2rem;
-    }
-    
-    .api-form {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    
-    .api-form input {
-      flex: 1;
-      min-width: 200px;
-      padding: 0.75rem 1rem;
-      background: #2a2a2a;
-      border: 1px solid #333;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.9rem;
-    }
-    
-    .api-form button {
-      padding: 0.75rem 1.5rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    
-    .api-form button:hover {
-      opacity: 0.9;
-    }
-    
-    .api-form button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    .result {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: #2a2a2a;
-      border-radius: 8px;
-      font-family: monospace;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    
-    .result-image {
-      margin-top: 1rem;
-      max-width: 100%;
-      border-radius: 8px;
-    }
-    
-    .image-card.selectable {
-      cursor: pointer;
-      transition: all 0.2s;
-      border: 2px solid transparent;
-    }
-    
-    .image-card.selectable:hover {
-      border-color: #667eea;
-      transform: translateY(-2px);
-    }
-    
-    .image-card.selectable.selected {
-      border-color: #667eea;
-      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
-    }
-    
-    .image-card.wide img {
-      height: 180px;
-    }
-    
-    .selected-info {
-      background: #2a2a2a;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
+
+    .ig-header {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      padding: 12px;
     }
-    
-    .selected-info .type-badge {
-      background: #667eea;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
+
+    .ig-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+      padding: 2px;
+      margin-right: 10px;
+    }
+
+    .ig-avatar-inner {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .ig-user-info {
+      flex: 1;
+    }
+
+    .ig-username {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
       font-weight: 600;
     }
-    
-    .context-selectors {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
+
+    .ig-verified {
+      width: 12px;
+      height: 12px;
     }
-    
-    .selector-group {
+
+    .ig-sponsored {
+      font-size: 11px;
+      color: #8e8e8e;
+    }
+
+    .ig-more {
+      color: #262626;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+
+    .ig-image-wrap {
+      aspect-ratio: 1;
+    }
+
+    .ig-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .ig-actions {
+      display: flex;
+      padding: 10px 12px 6px;
+    }
+
+    .ig-actions-left {
+      display: flex;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .ig-action-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .ig-likes {
+      padding: 0 12px 4px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .ig-caption {
+      padding: 0 12px 10px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .ig-caption-user {
+      font-weight: 600;
+    }
+
+    .ig-hashtag {
+      color: #00376b;
+    }
+
+    .ig-cta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 12px 12px;
+      padding: 8px 10px;
+      background: #0095f6;
+      border-radius: 6px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .ig-cta:hover {
+      background: #1877f2;
+    }
+
+    .ig-cta svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== Right Panel ===== */
+    .right-panel {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 20px;
     }
-    
-    .selector-group label {
-      font-size: 0.8rem;
-      color: #888;
+
+    .utm-section {
+      background: #fff;
+      border: 1px solid #dbdbdb;
+      border-radius: 12px;
+      padding: 20px;
     }
-    
-    .selector-group select {
-      padding: 0.75rem 1rem;
-      background: #2a2a2a;
-      border: 1px solid #333;
-      border-radius: 8px;
+
+    .utm-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #262626;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .utm-title svg {
+      width: 16px;
+      height: 16px;
+      color: #8e8e8e;
+    }
+
+    .utm-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .utm-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .utm-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #8e8e8e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .utm-value {
+      font-size: 12px;
+      font-weight: 500;
+      color: #262626;
+      background: #fafafa;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #efefef;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      word-break: break-all;
+    }
+
+    .cta-section {
+      background: #fff;
+      border: 1px solid #dbdbdb;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .cta-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 24px;
+      background: #262626;
       color: #fff;
-      font-size: 0.9rem;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 1rem center;
-      padding-right: 2.5rem;
+      text-decoration: none;
+      transition: all 0.2s;
     }
-    
-    .selector-group select:hover {
-      border-color: #555;
+
+    .cta-button:hover {
+      background: #000;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
-    
-    .selector-group select:focus {
-      outline: none;
-      border-color: #667eea;
+
+    .cta-button svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Responsive */
+    @media (max-width: 750px) {
+      .demo-layout {
+        grid-template-columns: 1fr;
+        max-width: 340px;
+        gap: 24px;
+      }
+
+      .carousel-container {
+        width: 100%;
+      }
+
+      .carousel-prev {
+        left: 8px;
+      }
+
+      .carousel-next {
+        right: 8px;
+      }
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <h1>AI Visual Generator</h1>
-    <p class="subtitle">Test different traffic sources and see how images are generated</p>
-    
-    <!-- Context Selection -->
-    <div class="test-section">
-      <h2>Configure Context</h2>
-      <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
-        Select traffic source and campaign to test different styles:
-      </p>
-      <div class="context-selectors">
-        <div class="selector-group">
-          <label>UTM Source</label>
-          <select id="utm-source" onchange="updateContext()">
-            <option value="">Direct (no UTM)</option>
-            <option value="instagram">📸 Instagram</option>
-            <option value="tiktok">🎵 TikTok</option>
-            <option value="facebook">👍 Facebook</option>
-            <option value="google">🔍 Google</option>
-          </select>
+  <div class="demo-layout">
+    <!-- Left: Carousel -->
+    <div class="carousel-container">
+      <button class="carousel-nav carousel-prev" onclick="prevSlide()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+      <button class="carousel-nav carousel-next" onclick="nextSlide()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+
+      <div class="carousel-viewport">
+        <div class="carousel-track" id="carousel-track">
+          <!-- Ad 1 -->
+          <div class="carousel-slide" data-ad="active-dog">
+            <article class="ig-post">
+              <div class="ig-header">
+                <div class="ig-avatar">
+                  <div class="ig-avatar-inner">🐾</div>
+                </div>
+                <div class="ig-user-info">
+                  <div class="ig-username">thepetbrand <svg class="ig-verified" viewBox="0 0 24 24" fill="#0095f6">
+                      <path
+                        d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z" />
+                    </svg></div>
+                  <div class="ig-sponsored">Sponsored</div>
+                </div>
+                <div class="ig-more">•••</div>
+              </div>
+              <div class="ig-image-wrap"><img class="ig-image" src="7aWGgihauCM7mPVtrbbfQ.png" alt=""></div>
+              <div class="ig-actions">
+                <div class="ig-actions-left">
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <path
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg></div>
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <path
+                        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg></div>
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg></div>
+                </div>
+                <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg></div>
+              </div>
+              <div class="ig-likes">12,847 likes</div>
+              <div class="ig-caption"><span class="ig-caption-user">thepetbrand</span> Give them the best life! 🐕 <span
+                  class="ig-hashtag">#ActiveDog</span></div>
+              <a class="ig-cta" href="#" onclick="visitStore('active-dog'); return false;">Shop Now <svg
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg></a>
+            </article>
+          </div>
+
+          <!-- Ad 2 -->
+          <div class="carousel-slide" data-ad="new-puppy">
+            <article class="ig-post">
+              <div class="ig-header">
+                <div class="ig-avatar">
+                  <div class="ig-avatar-inner">🐾</div>
+                </div>
+                <div class="ig-user-info">
+                  <div class="ig-username">thepetbrand <svg class="ig-verified" viewBox="0 0 24 24" fill="#0095f6">
+                      <path
+                        d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z" />
+                    </svg></div>
+                  <div class="ig-sponsored">Sponsored</div>
+                </div>
+                <div class="ig-more">•••</div>
+              </div>
+              <div class="ig-image-wrap"><img class="ig-image" src="9UqfhdlcoTZu06RbWbjiu.png" alt=""></div>
+              <div class="ig-actions">
+                <div class="ig-actions-left">
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <path
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg></div>
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <path
+                        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg></div>
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg></div>
+                </div>
+                <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg></div>
+              </div>
+              <div class="ig-likes">23,156 likes</div>
+              <div class="ig-caption"><span class="ig-caption-user">thepetbrand</span> Welcome home! 🐶💕 <span
+                  class="ig-hashtag">#NewPuppy</span></div>
+              <a class="ig-cta" href="#" onclick="visitStore('new-puppy'); return false;">Shop Now <svg
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg></a>
+            </article>
+          </div>
+
+          <!-- Ad 3 -->
+          <div class="carousel-slide" data-ad="cat-toy">
+            <article class="ig-post">
+              <div class="ig-header">
+                <div class="ig-avatar">
+                  <div class="ig-avatar-inner">🐾</div>
+                </div>
+                <div class="ig-user-info">
+                  <div class="ig-username">thepetbrand <svg class="ig-verified" viewBox="0 0 24 24" fill="#0095f6">
+                      <path
+                        d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z" />
+                    </svg></div>
+                  <div class="ig-sponsored">Sponsored</div>
+                </div>
+                <div class="ig-more">•••</div>
+              </div>
+              <div class="ig-image-wrap"><img class="ig-image" src="EBeuHNNCPELt-PgrxbsBX.png" alt=""></div>
+              <div class="ig-actions">
+                <div class="ig-actions-left">
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <path
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg></div>
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <path
+                        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg></div>
+                  <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg></div>
+                </div>
+                <div class="ig-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg></div>
+              </div>
+              <div class="ig-likes">18,432 likes</div>
+              <div class="ig-caption"><span class="ig-caption-user">thepetbrand</span> Unleash the fun! 😻✨ <span
+                  class="ig-hashtag">#CatToys</span></div>
+              <a class="ig-cta" href="#" onclick="visitStore('cat-toy'); return false;">Shop Now <svg
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg></a>
+            </article>
+          </div>
         </div>
-        <div class="selector-group">
-          <label>UTM Campaign</label>
-          <select id="utm-campaign" onchange="updateContext()">
-            <option value="">No Campaign</option>
-            <option value="summer_collection">☀️ Summer Collection</option>
-            <option value="winter_sale">❄️ Winter Sale</option>
-            <option value="trending_style">🔥 Trending Style</option>
-            <option value="new_arrivals">✨ New Arrivals</option>
-            <option value="flash_sale">⚡ Flash Sale</option>
-            <option value="holiday_gift">🎁 Holiday Gift</option>
-          </select>
-        </div>
-        <div class="selector-group">
-          <label>Time of Day</label>
-          <select id="time-of-day" onchange="updateContext()">
-            <option value="auto">🕐 Auto (current time)</option>
-            <option value="morning">🌅 Morning</option>
-            <option value="afternoon">☀️ Afternoon</option>
-            <option value="evening">🌇 Evening</option>
-            <option value="night">🌙 Night</option>
-          </select>
-        </div>
-        <div class="selector-group">
-          <label>Season</label>
-          <select id="season" onchange="updateContext()">
-            <option value="auto">📅 Auto (current season)</option>
-            <option value="spring">🌸 Spring</option>
-            <option value="summer">☀️ Summer</option>
-            <option value="autumn">🍂 Autumn</option>
-            <option value="winter">❄️ Winter</option>
-          </select>
-        </div>
+      </div>
+
+      <div class="carousel-dots" id="carousel-dots">
+        <button class="carousel-dot active" onclick="goToSlide(0)"></button>
+        <button class="carousel-dot" onclick="goToSlide(1)"></button>
+        <button class="carousel-dot" onclick="goToSlide(2)"></button>
       </div>
     </div>
-    
-    <!-- Current Context -->
-    <div class="current-context">
-      <h2>Current Context (Detected)</h2>
-      <div class="context-grid" id="context-grid">
-        <!-- Filled by JS -->
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <div class="utm-section">
+        <div class="utm-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          UTM Parameters
+        </div>
+        <div class="utm-fields" id="utm-fields"></div>
       </div>
-    </div>
-    
-    <!-- API Test -->
-    <div class="api-test">
-      <h2>Generate AI Image</h2>
-      <div class="selected-info" id="selected-info" style="display: none;">
-        <span>Selected:</span>
-        <span class="type-badge" id="selected-type">product</span>
-        <span id="selected-name" style="color: #ccc;"></span>
-      </div>
-      <div class="api-form">
-        <input type="text" id="image-url" placeholder="Enter image URL or select from above..." 
-               value="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800">
-        <input type="hidden" id="image-type" value="product">
-        <button id="generate-btn" onclick="testGenerate()">Generate</button>
-      </div>
-      <div class="result" id="result" style="display: none;"></div>
-      <img class="result-image" id="result-image" style="display: none;">
-    </div>
-    
-    <!-- Image Selection -->
-    <div class="test-section">
-      <h2>Select Test Image</h2>
-      <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
-        Click an image to select it for testing:
-      </p>
-      
-      <h3 style="color: #888; font-size: 0.9rem; margin: 1rem 0 0.5rem;">Product Images</h3>
-      <div class="demo-images" style="margin-top: 0.5rem;">
-        <div class="image-card selectable" onclick="selectImage(this, 'product')">
-          <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400" alt="Watch">
-          <div class="label">⌚ Watch</div>
-        </div>
-        <div class="image-card selectable" onclick="selectImage(this, 'product')">
-          <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" alt="Sneaker">
-          <div class="label">👟 Sneaker</div>
-        </div>
-        <div class="image-card selectable" onclick="selectImage(this, 'product')">
-          <img src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=400" alt="Skincare">
-          <div class="label">🧴 Skincare</div>
-        </div>
-        <div class="image-card selectable" onclick="selectImage(this, 'product')">
-          <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400" alt="Headphones">
-          <div class="label">🎧 Headphones</div>
-        </div>
-        <div class="image-card selectable" onclick="selectImage(this, 'product')">
-          <img src="https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400" alt="Sunglasses">
-          <div class="label">🕶️ Sunglasses</div>
-        </div>
-        <div class="image-card selectable" onclick="selectImage(this, 'product')">
-          <img src="https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400" alt="Bag">
-          <div class="label">👜 Handbag</div>
-        </div>
-      </div>
-      
-      <h3 style="color: #888; font-size: 0.9rem; margin: 1.5rem 0 0.5rem;">Banner / Hero Images</h3>
-      <div class="demo-images" style="margin-top: 0.5rem;">
-        <div class="image-card selectable wide" onclick="selectImage(this, 'banner')">
-          <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800" alt="Store">
-          <div class="label">🏬 Fashion Store</div>
-        </div>
-        <div class="image-card selectable wide" onclick="selectImage(this, 'banner')">
-          <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800" alt="Shopping">
-          <div class="label">🛍️ Shopping</div>
-        </div>
-        <div class="image-card selectable wide" onclick="selectImage(this, 'banner')">
-          <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800" alt="Fashion">
-          <div class="label">👗 Fashion</div>
-        </div>
+
+      <div class="cta-section">
+        <a class="cta-button" id="cta-button" href="#" target="_blank">
+          Try Demo in Shopify
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </a>
       </div>
     </div>
   </div>
-  
+
   <script>
-    // Get auto-detected time of day
-    function getAutoTimeOfDay() {
-      const hour = new Date().getHours();
-      if (hour >= 5 && hour < 12) return 'morning';
-      if (hour >= 12 && hour < 17) return 'afternoon';
-      if (hour >= 17 && hour < 21) return 'evening';
-      return 'night';
+    const ads = {
+      'active-dog': { source: 'instagram', medium: 'paid_social', campaign: 'active_dog_gear', content: 'ig_feed_image_bordercollie_harness_v1', term: 'dog_owners_outdoor_active' },
+      'new-puppy': { source: 'instagram', medium: 'paid_social', campaign: 'new_puppy_essentials', content: 'ig_feed_image_goldendoodle_starter_kit_v1', term: 'new_puppy_parents' },
+      'cat-toy': { source: 'instagram', medium: 'paid_social', campaign: 'cat_toys', content: 'ig_feed_image_ginger_cat_wand_toy_v1', term: 'cat_owners_playtime' }
+    };
+    const adKeys = ['active-dog', 'new-puppy', 'cat-toy'];
+    const baseUrl = 'https://the-pet-brand-kura.myshopify.com/';
+    let currentIndex = 0;
+
+    function buildUrl(adKey) {
+      const p = ads[adKey];
+      return `${baseUrl}?utm_source=${p.source}&utm_medium=${p.medium}&utm_campaign=${p.campaign}&utm_content=${p.content}&utm_term=${p.term}`;
     }
-    
-    // Get auto-detected season
-    function getAutoSeason() {
-      const month = new Date().getMonth();
-      if (month >= 2 && month <= 4) return 'spring';
-      if (month >= 5 && month <= 7) return 'summer';
-      if (month >= 8 && month <= 10) return 'autumn';
-      return 'winter';
-    }
-    
-    // Get current context from selectors
-    function getCurrentContext() {
-      const utmSource = document.getElementById('utm-source').value;
-      const utmCampaign = document.getElementById('utm-campaign').value;
-      const timeOfDaySelect = document.getElementById('time-of-day').value;
-      const seasonSelect = document.getElementById('season').value;
-      
-      return {
-        utmSource: utmSource || undefined,
-        utmCampaign: utmCampaign || undefined,
-        timeOfDay: timeOfDaySelect === 'auto' ? getAutoTimeOfDay() : timeOfDaySelect,
-        season: seasonSelect === 'auto' ? getAutoSeason() : seasonSelect,
-      };
-    }
-    
-    // Display current context
-    function displayContext() {
-      const ctx = getCurrentContext();
-      
-      const context = {
-        'UTM Source': ctx.utmSource || '(none)',
-        'UTM Campaign': ctx.utmCampaign || '(none)',
-        'Time of Day': ctx.timeOfDay,
-        'Season': ctx.season,
-        'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
-      };
-      
-      const grid = document.getElementById('context-grid');
-      grid.innerHTML = Object.entries(context).map(([label, value]) => `
-        <div class="context-item">
-          <div class="label">${label}</div>
-          <div class="value">${value}</div>
-        </div>
-      `).join('');
-    }
-    
-    // Update context when selectors change
-    function updateContext() {
-      displayContext();
-    }
-    
-    // Select image from gallery
-    function selectImage(card, imageType) {
-      // Remove previous selection
-      document.querySelectorAll('.image-card.selected').forEach(el => {
-        el.classList.remove('selected');
+
+    function updateDisplay() {
+      const adKey = adKeys[currentIndex];
+      const p = ads[adKey];
+
+      document.getElementById('utm-fields').innerHTML = `
+        <div class="utm-field"><span class="utm-label">Source</span><span class="utm-value">${p.source}</span></div>
+        <div class="utm-field"><span class="utm-label">Medium</span><span class="utm-value">${p.medium}</span></div>
+        <div class="utm-field"><span class="utm-label">Campaign</span><span class="utm-value">${p.campaign}</span></div>
+        <div class="utm-field"><span class="utm-label">Content</span><span class="utm-value">${p.content}</span></div>
+        <div class="utm-field"><span class="utm-label">Term</span><span class="utm-value">${p.term}</span></div>
+      `;
+      document.getElementById('cta-button').href = buildUrl(adKey);
+
+      // Update carousel
+      document.getElementById('carousel-track').style.transform = `translateX(-${currentIndex * 100}%)`;
+
+      // Update dots
+      document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentIndex);
       });
-      
-      // Select this one
-      card.classList.add('selected');
-      
-      // Get image URL (use higher resolution)
-      const img = card.querySelector('img');
-      const imgUrl = img.src.replace('w=400', 'w=800');
-      const imgName = card.querySelector('.label').textContent;
-      
-      // Update form
-      document.getElementById('image-url').value = imgUrl;
-      document.getElementById('image-type').value = imageType;
-      
-      // Show selected info
-      const selectedInfo = document.getElementById('selected-info');
-      selectedInfo.style.display = 'flex';
-      document.getElementById('selected-type').textContent = imageType;
-      document.getElementById('selected-name').textContent = imgName;
+
+      // Update nav buttons
+      document.querySelector('.carousel-prev').disabled = currentIndex === 0;
+      document.querySelector('.carousel-next').disabled = currentIndex === adKeys.length - 1;
     }
-    
-    // Test API directly
-    async function testGenerate() {
-      const btn = document.getElementById('generate-btn');
-      const imageUrl = document.getElementById('image-url').value;
-      const imageType = document.getElementById('image-type').value;
-      const resultDiv = document.getElementById('result');
-      const resultImg = document.getElementById('result-image');
-      
-      if (!imageUrl) {
-        alert('Please enter an image URL or select from above');
-        return;
-      }
-      
-      btn.disabled = true;
-      btn.textContent = 'Generating...';
-      resultDiv.style.display = 'block';
-      resultDiv.textContent = 'Calling API...';
-      resultImg.style.display = 'none';
-      
-      try {
-        const ctx = getCurrentContext();
-        const now = new Date();
-        
-        const response = await fetch('http://localhost:3000/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageUrl,
-            imageType,
-            utmSource: ctx.utmSource,
-            utmCampaign: ctx.utmCampaign,
-            timeOfDay: ctx.timeOfDay,
-            season: ctx.season,
-            clientTime: now.toISOString(),
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          }),
-        });
-        
-        const data = await response.json();
-        resultDiv.textContent = JSON.stringify(data, null, 2);
-        
-        if (data.success && data.imageUrl) {
-          resultImg.src = data.imageUrl;
-          resultImg.style.display = 'block';
-        }
-      } catch (error) {
-        resultDiv.textContent = 'Error: ' + error.message;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Generate';
-      }
+
+    function prevSlide() {
+      if (currentIndex > 0) { currentIndex--; updateDisplay(); }
     }
-    
-    // Init
-    displayContext();
+
+    function nextSlide() {
+      if (currentIndex < adKeys.length - 1) { currentIndex++; updateDisplay(); }
+    }
+
+    function goToSlide(index) {
+      currentIndex = index;
+      updateDisplay();
+    }
+
+    function visitStore(adKey) {
+      window.open(buildUrl(adKey), '_blank');
+    }
+
+    document.addEventListener('DOMContentLoaded', updateDisplay);
   </script>
 </body>
-</html>
 
+</html>
