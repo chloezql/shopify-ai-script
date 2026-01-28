@@ -1,5 +1,24 @@
 # Shopify 集成指南
 
+## 版本选择
+
+我们提供两个版本的集成脚本：
+
+| 版本 | 文件 | 特点 |
+|------|------|------|
+| **v1 (基础版)** | `embed.js` | 产品页替换第一张图 |
+| **v2 (推荐)** | `theme-snippet.html` | 首页预加载 + 替换第二张图 + 并行生成 |
+
+### v2 版本特点
+- ✅ 在首页/集合页就开始预加载 AI 图片
+- ✅ 使用第一张产品图（清晰裸图）作为素材
+- ✅ 生成结果替换到第二张图位置（保留原始裸图）
+- ✅ 支持多产品并行生成（最多 4 个同时）
+- ✅ Hover 时显示 AI 生成的图片
+- ✅ 产品详情页复用已生成的缓存
+
+---
+
 ## 步骤 1：部署 API 服务
 
 首先将服务部署到云端（Vercel/Railway 等），获取 API 地址，例如：
@@ -82,6 +101,55 @@ data-banner-selector=".hero--medium img"
   </script>
 </body>
 </html>
+```
+
+---
+
+## 使用 v2 版本（推荐）
+
+v2 版本在首页就开始预加载 AI 图片，并替换到第二张图的位置。
+
+1. 打开 `standalone/public/theme-snippet.html`
+2. 复制 `<script>` 标签的全部内容
+3. 粘贴到 Shopify 主题的 `theme.liquid` 文件中，放在 `</body>` 之前
+
+### 配置说明
+
+根据你的主题，可能需要调整以下选择器：
+
+```javascript
+const CONFIG = {
+    apiUrl: 'https://你的域名/api',
+    
+    // 首页产品卡片选择器（根据主题调整）
+    productCardSelector: [
+        '.product-card',
+        '.card--product',
+        // 添加你主题的选择器...
+    ].join(', '),
+    
+    // 产品详情页媒体容器选择器
+    productMediaContainerSelector: '.product__media-list, ...',
+    
+    // 最大并发生成数
+    maxConcurrent: 4,
+};
+```
+
+### 工作流程
+
+```
+用户从 Instagram 点击广告进入首页
+           ↓
+检测所有产品卡片，提取第一张图 URL（清晰裸图）
+           ↓
+并行发起 AI 生成请求（最多 4 个同时）
+           ↓
+生成完成后，结果放到第二张图的位置
+           ↓
+用户 hover 产品卡片时，看到 AI 生成的图片
+           ↓
+进入产品详情页时，复用已生成的图片替换第二张图
 ```
 
 ---

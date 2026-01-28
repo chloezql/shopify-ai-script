@@ -18,18 +18,22 @@ export interface GenerateImageOutput {
 }
 
 /**
- * 使用 nano-banana-pro/edit 进行图片编辑
+ * 使用 nano-banana/edit 进行图片编辑（Gemini 2.5 Flash，更快）
  * 
  * 直接在原图基础上修改：
  * - 产品图：保留产品突出，改变氛围和设计
  * - Banner 图：基于现有图进行风格变化
+ * 
+ * 模型选择：
+ * - nano-banana/edit: 更快，适合实时场景（当前使用）
+ * - nano-banana-pro/edit: 更高质量，但较慢
  */
 export async function generateProductBackground(
     input: GenerateImageInput
 ): Promise<GenerateImageOutput> {
     const imageType = input.imageType || 'product';
 
-    console.log(`[fal.ai] Starting ${imageType} edit with nano-banana-pro...`);
+    console.log(`[fal.ai] Starting ${imageType} edit with nano-banana (fast mode)...`);
     console.log('[fal.ai] Image URL:', input.imageUrl);
     console.log('[fal.ai] Prompt:', input.prompt);
 
@@ -38,13 +42,13 @@ export async function generateProductBackground(
     console.log('[fal.ai] Full prompt:', fullPrompt);
 
     try {
-        // 添加超时控制 (3分钟)
+        // 添加超时控制 (2分钟，因为更快了)
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('fal.ai request timeout after 3 minutes')), 180000);
+            setTimeout(() => reject(new Error('fal.ai request timeout after 2 minutes')), 120000);
         });
 
         let progressCount = 0;
-        const generatePromise = fal.subscribe('fal-ai/nano-banana-pro/edit', {
+        const generatePromise = fal.subscribe('fal-ai/nano-banana/edit', {
             input: {
                 prompt: fullPrompt,
                 image_urls: [input.imageUrl],

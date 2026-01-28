@@ -1,0 +1,925 @@
+<!-- 
+  AI Visual Generator v2 - 首页预加载 + 第二张图替换
+  
+  使用方法：
+  1. 复制下面的 <script> 标签内容
+  2. 粘贴到 Shopify 主题的 theme.liquid 文件中，放在 </body> 之前
+  3. 根据你的主题调整 productCardSelector 选择器
+  
+  功能特点：
+  - 在首页/集合页就开始预加载 AI 生成图片
+  - 使用第一张产品图（清晰裸图）作为素材
+  - 生成结果替换到第二张图位置
+  - 支持多产品并行生成
+  - Hover 时显示 AI 生成的图片
+  - 产品详情页复用已生成的缓存
+-->
+
+<script>
+    (function () {
+        'use strict';
+
+        const CONFIG = {
+            apiUrl: 'https://shopify-ai-script-production.up.railway.app/api',
+            // 首页产品卡片选择器（适配常见主题，根据实际主题调整）
+            productCardSelector: [
+                '.product-card-wrapper',  // Dawn 主题
+                '.card-wrapper',          // Dawn 主题备选
+                '.card--standard',        // Dawn 卡片
+                '.product-card',
+                '.product-item',
+                '.grid__item[class*="product"]',
+                '.collection-product-card',
+                '.card--product',
+                'product-card',
+            ].join(', '),
+            // 产品详情页媒体容器选择器
+            productMediaContainerSelector: '.product__media-list, .product__media-wrapper, .product-media-container, .product__photos, .product-single__photos, .product__media-gallery, .product-gallery, media-gallery',
+            // 产品详情页单个媒体项选择器
+            productMediaItemSelector: '.product__media-item, .product-media, .product__photo-wrapper, li[data-media-id], .media-gallery__item, .product__media-item--image',
+            // Banner/Hero Image 选择器
+            bannerSelector: '.banner__media img, .hero-banner img, .slideshow__image, .hero__image img, .image-hero img',
+            maxConcurrent: 8,  // 最大并发生成数（可调整：4-12）
+            timeout: 60000,
+            debug: true,
+            // 使用 sessionStorage 跨页面缓存
+            useSessionCache: true,
+        };
+
+        const log = (...args) => { if (CONFIG.debug) console.log('[AI Visual]', ...args); };
+
+        // 生成状态管理（内存缓存）
+        const generationState = new Map(); // key -> { status, imageUrl, targetImg }
+
+        // =====================
+        // SessionStorage 缓存（跨页面持久化）
+        // =====================
+
+        const CACHE_KEY = 'ai_visual_cache';
+        const CACHE_TTL = 30 * 60 * 1000; // 30 分钟过期
+
+        function getSessionCache() {
+            if (!CONFIG.useSessionCache) return {};
+            try {
+                const data = sessionStorage.getItem(CACHE_KEY);
+                if (!data) return {};
+                const parsed = JSON.parse(data);
+                // 清理过期缓存
+                const now = Date.now();
+                Object.keys(parsed).forEach(key => {
+                    if (parsed[key].timestamp && now - parsed[key].timestamp > CACHE_TTL) {
+                        delete parsed[key];
+                    }
+                });
+                return parsed;
+            } catch {
+                return {};
+            }
+        }
+
+        function setSessionCache(key, imageUrl) {
+            if (!CONFIG.useSessionCache) return;
+            try {
+                const cache = getSessionCache();
+                cache[key] = { imageUrl, timestamp: Date.now() };
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                log('Cache write error:', e);
+            }
+        }
+
+        function getCachedUrl(key) {
+            const cache = getSessionCache();
+            return cache[key]?.imageUrl || null;
+        }
+
+        // 生成包含 UTM 信息的缓存 Key
+        function getUtmCacheKey(baseKey) {
+            const utm = getUtmParams();
+            const utmPart = [
+                utm.utmSource || '',
+                utm.utmCampaign || '',
+                utm.utmContent || '',
+                utm.utmTerm || '',
+            ].filter(Boolean).join('_') || 'direct';
+            return `${baseKey}__${utmPart}`;
+        }
+
+        // 注入 CSS 动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+        @keyframes ai-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes ai-pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes ai-reveal {
+            0% { clip-path: inset(0 100% 0 0); }
+            100% { clip-path: inset(0 0 0 0); }
+        }
+        
+        .ai-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* 移除文字提示，只保留 shimmer 效果 */
+        
+        .ai-loading-overlay::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255,255,255,0.4) 50%,
+                transparent 100%
+            );
+            animation: ai-shimmer 1.5s ease-in-out infinite;
+        }
+        
+        .ai-reveal {
+            animation: ai-reveal 0.8s ease-out forwards;
+        }
+        
+        .ai-generated-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+        
+        /* 产品卡片第二张图的容器样式 */
+        .ai-secondary-image-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .product-card:hover .ai-secondary-image-wrapper,
+        .card--product:hover .ai-secondary-image-wrapper,
+        [class*="product"]:hover .ai-secondary-image-wrapper {
+            opacity: 1;
+        }
+    `;
+        document.head.appendChild(style);
+
+        // =====================
+        // 工具函数
+        // =====================
+
+        function getUtmParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                utmSource: params.get('utm_source') || undefined,
+                utmMedium: params.get('utm_medium') || undefined,
+                utmCampaign: params.get('utm_campaign') || undefined,
+                utmContent: params.get('utm_content') || undefined,
+                utmTerm: params.get('utm_term') || undefined,
+            };
+        }
+
+        function getTimeContext() {
+            const now = new Date();
+            const hour = now.getHours();
+            const month = now.getMonth();
+            let timeOfDay = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 17 ? 'afternoon' : hour >= 17 && hour < 21 ? 'evening' : 'night';
+            let season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'autumn' : 'winter';
+            return { timeOfDay, season, clientTime: now.toISOString() };
+        }
+
+        function shouldProcess() {
+            const utm = getUtmParams();
+            const referrer = document.referrer || '';
+            if (utm.utmSource || utm.utmCampaign) return true;
+            return ['instagram', 'tiktok', 'facebook', 'google'].some(p => referrer.toLowerCase().includes(p));
+        }
+
+        function getProductHandleFromCard(card) {
+            const link = card.querySelector('a[href*="/products/"]');
+            if (!link) return null;
+            const match = link.getAttribute('href')?.match(/\/products\/([^?#\/]+)/);
+            return match ? match[1] : null;
+        }
+
+        function getProductHandleFromUrl() {
+            const match = window.location.pathname.match(/\/products\/([^?#\/]+)/);
+            return match ? match[1] : null;
+        }
+
+        // =====================
+        // API 请求
+        // =====================
+
+        async function generateImage(imageUrl, imageType, productName = '') {
+            const context = {
+                ...getUtmParams(),
+                referrer: document.referrer,
+                ...getTimeContext(),
+                productName,
+            };
+            log('Generating:', { imageUrl, imageType, context });
+
+            try {
+                const response = await fetch(`${CONFIG.apiUrl}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageUrl, imageType, ...context }),
+                });
+                const data = await response.json();
+                log('Result:', data);
+                return data.success ? data.imageUrl : null;
+            } catch (error) {
+                console.error('[AI Visual] Error:', error);
+                return null;
+            }
+        }
+
+        // =====================
+        // 首页产品卡片处理
+        // =====================
+
+        function findProductCards() {
+            // 首先尝试配置的选择器
+            let cards = document.querySelectorAll(CONFIG.productCardSelector);
+
+            if (cards.length === 0) {
+                // 尝试更多通用选择器
+                const fallbackSelectors = [
+                    // Dawn 主题
+                    '.product-card-wrapper',
+                    '.card-wrapper',
+                    // 其他常见主题
+                    '.grid-product',
+                    '.product-grid-item',
+                    '.product-index',
+                    '.product-block',
+                    '.collection-product',
+                    // 通用模式：包含产品链接的卡片
+                    '[class*="product"][class*="card"]',
+                    '[class*="product"][class*="item"]',
+                    '.grid__item a[href*="/products/"]',
+                    // 更宽松的匹配
+                    'a[href*="/products/"]',
+                ];
+
+                for (const selector of fallbackSelectors) {
+                    try {
+                        const found = document.querySelectorAll(selector);
+                        if (found.length > 0) {
+                            log(`Found ${found.length} cards with fallback selector: ${selector}`);
+                            // 如果是链接，找到其父容器
+                            if (selector.includes('a[href')) {
+                                cards = Array.from(found).map(a => {
+                                    // 向上找到合适的卡片容器
+                                    let parent = a.parentElement;
+                                    for (let i = 0; i < 5 && parent; i++) {
+                                        if (parent.querySelector('img')) {
+                                            return parent;
+                                        }
+                                        parent = parent.parentElement;
+                                    }
+                                    return a.parentElement;
+                                });
+                                // 去重
+                                cards = [...new Set(cards)];
+                            } else {
+                                cards = found;
+                            }
+                            break;
+                        }
+                    } catch (e) {
+                        // 某些选择器可能无效
+                    }
+                }
+            }
+
+            log(`Found ${cards.length} product cards`);
+
+            // 调试：显示找到的第一个卡片的类名
+            if (cards.length > 0) {
+                const firstCard = cards[0];
+                log('First card classes:', firstCard.className);
+                log('First card tag:', firstCard.tagName);
+            } else {
+                log('💡 No product cards found. Check your theme\'s HTML structure.');
+                log('💡 Look for elements containing product links like: a[href*="/products/"]');
+            }
+
+            return Array.from(cards);
+        }
+
+        function getCardImages(card) {
+            // 尝试多种选择器找到图片（Dawn 主题优先）
+            const imgSelectors = [
+                '.card__media .media img',     // Dawn 主题
+                '.card__media img',            // Dawn 主题备选
+                '.media--hover-effect img',    // Dawn hover 效果图片
+                '.product-card__image img',
+                '.product-card-wrapper img',
+                '.media img',
+                'img[srcset]',
+                'img',
+            ];
+
+            for (const selector of imgSelectors) {
+                const imgs = card.querySelectorAll(selector);
+                if (imgs.length > 0) {
+                    log(`Found ${imgs.length} images with selector: ${selector}`);
+                    return Array.from(imgs);
+                }
+            }
+            return [];
+        }
+
+        function addLoadingOverlay(element) {
+            const parent = element.parentElement;
+            if (!parent || parent.querySelector('.ai-loading-overlay')) return null;
+
+            const pos = getComputedStyle(parent).position;
+            if (pos === 'static') parent.style.position = 'relative';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'ai-loading-overlay';
+            parent.appendChild(overlay);
+            return overlay;
+        }
+
+        function createSecondaryImageSlot(card, primaryImg) {
+            // 检查是否已有第二张图或我们创建的 wrapper
+            const existingWrapper = card.querySelector('.ai-secondary-image-wrapper');
+            if (existingWrapper) return existingWrapper.querySelector('img');
+
+            const imgs = getCardImages(card);
+            if (imgs.length >= 2) {
+                // 已有第二张图，直接使用
+                return imgs[1];
+            }
+
+            // 创建第二张图的容器
+            const imgContainer = primaryImg.closest('.card__media, .product-card__image, .media') || primaryImg.parentElement;
+            if (!imgContainer) return null;
+
+            const pos = getComputedStyle(imgContainer).position;
+            if (pos === 'static') imgContainer.style.position = 'relative';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'ai-secondary-image-wrapper';
+
+            const newImg = document.createElement('img');
+            newImg.className = 'ai-generated-image';
+            newImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+            newImg.alt = 'AI Generated';
+
+            wrapper.appendChild(newImg);
+            imgContainer.appendChild(wrapper);
+
+            return newImg;
+        }
+
+        async function processProductCard(card, index) {
+            const productHandle = getProductHandleFromCard(card);
+            if (!productHandle) {
+                log('No product handle found for card', index);
+                return;
+            }
+
+            // 检查是否已处理
+            if (generationState.has(productHandle)) {
+                log('Already processing/processed:', productHandle);
+                return;
+            }
+
+            const imgs = getCardImages(card);
+            if (imgs.length === 0) {
+                log('No images found in card:', productHandle);
+                return;
+            }
+
+            const primaryImg = imgs[0];
+            const originalSrc = primaryImg.src || primaryImg.dataset.src || primaryImg.currentSrc;
+
+            if (!originalSrc || !originalSrc.startsWith('http')) {
+                log('Invalid image src:', originalSrc);
+                return;
+            }
+
+            // 获取或创建第二张图的位置
+            const secondaryImg = createSecondaryImageSlot(card, primaryImg);
+            if (!secondaryImg) {
+                log('Could not create secondary image slot');
+                return;
+            }
+
+            // 设置状态
+            generationState.set(productHandle, {
+                status: 'loading',
+                imageUrl: null,
+                targetImg: secondaryImg,
+                card: card,
+            });
+
+            // 添加 loading 状态到第二张图
+            const overlay = addLoadingOverlay(secondaryImg);
+
+            // 检查 sessionStorage 缓存（包含 UTM 信息）
+            const cacheKey = getUtmCacheKey(productHandle);
+            const cachedUrl = getCachedUrl(cacheKey);
+            if (cachedUrl) {
+                log(`Using cached image for: ${cacheKey}`);
+                if (overlay) overlay.remove();  // 立即移除 loading
+                applyImageToTarget(cachedUrl, secondaryImg, null, productHandle, true);  // skipAnimation = true
+                generationState.set(productHandle, { status: 'done', imageUrl: cachedUrl });
+                return;
+            }
+
+            log(`Starting generation for: ${productHandle} (cache key: ${cacheKey})`);
+
+            try {
+                // 使用第一张图（清晰裸图）作为素材
+                const newUrl = await generateImage(originalSrc, 'product', productHandle);
+
+                if (newUrl) {
+                    // 保存到内存和 sessionStorage（使用包含 UTM 的 key）
+                    generationState.set(productHandle, {
+                        status: 'done',
+                        imageUrl: newUrl,
+                        targetImg: secondaryImg,
+                    });
+                    setSessionCache(cacheKey, newUrl);
+
+                    applyImageToTarget(newUrl, secondaryImg, overlay, productHandle);
+                } else {
+                    if (overlay) overlay.remove();
+                    generationState.set(productHandle, { status: 'error' });
+                }
+            } catch (error) {
+                if (overlay) overlay.remove();
+                generationState.set(productHandle, { status: 'error' });
+                log('Error:', error);
+            }
+        }
+
+        function applyImageToTarget(newUrl, targetImg, overlay, logName, skipAnimation = false) {
+            log(`Attempting to apply image to ${logName}...`);
+            log(`Target img element:`, targetImg);
+            log(`New URL:`, newUrl);
+
+            if (!targetImg) {
+                log(`❌ Target image element is null/undefined for ${logName}`);
+                if (overlay) overlay.remove();
+                return;
+            }
+
+            const preload = new Image();
+            preload.crossOrigin = 'anonymous';  // 尝试处理 CORS
+
+            preload.onload = () => {
+                log(`✅ Image preloaded successfully for ${logName}`);
+                if (overlay) overlay.remove();
+
+                // 清除可能存在的 srcset
+                targetImg.removeAttribute('srcset');
+                targetImg.removeAttribute('data-srcset');
+
+                // 清除 picture source
+                const picture = targetImg.closest('picture');
+                if (picture) {
+                    picture.querySelectorAll('source').forEach(s => s.remove());
+                    log(`Removed picture sources`);
+                }
+
+                // 设置新图片
+                const oldSrc = targetImg.src;
+                targetImg.src = newUrl;
+                log(`Image src changed: ${oldSrc?.slice(0, 40)}... → ${newUrl.slice(0, 40)}...`);
+
+                // 缓存命中时不显示动画
+                if (!skipAnimation) {
+                    targetImg.classList.add('ai-reveal');
+                }
+
+                // 显示 wrapper（如果是我们创建的）
+                const wrapper = targetImg.closest('.ai-secondary-image-wrapper');
+                if (wrapper) {
+                    wrapper.style.opacity = '0'; // hover 时才显示
+                    log(`Set wrapper opacity to 0 (hover to show)`);
+                }
+
+                log(`✅ Applied image for ${logName}`);
+            };
+
+            preload.onerror = (e) => {
+                if (overlay) overlay.remove();
+                log(`❌ Failed to load generated image for ${logName}`);
+                log(`Error event:`, e);
+                log(`Attempted URL:`, newUrl);
+
+                // 尝试直接设置（不预加载）
+                log(`Attempting direct src set without preload...`);
+                targetImg.src = newUrl;
+            };
+
+            preload.src = newUrl;
+        }
+
+        async function processAllProductCards() {
+            const cards = findProductCards();
+            if (cards.length === 0) {
+                log('No product cards found on page');
+                return;
+            }
+
+            log(`Processing ${cards.length} product cards...`);
+
+            // 并行处理，但限制并发数
+            const chunks = [];
+            for (let i = 0; i < cards.length; i += CONFIG.maxConcurrent) {
+                chunks.push(cards.slice(i, i + CONFIG.maxConcurrent));
+            }
+
+            for (const chunk of chunks) {
+                await Promise.all(chunk.map((card, i) => processProductCard(card, i)));
+            }
+
+            log('All product cards processed');
+        }
+
+        // =====================
+        // Banner/Hero Image 处理
+        // =====================
+
+        async function processBannerImages() {
+            const banners = document.querySelectorAll(CONFIG.bannerSelector);
+            if (banners.length === 0) {
+                log('No banner images found');
+                return;
+            }
+
+            log(`Found ${banners.length} banner images`);
+
+            // Banner 通常只有 1-2 个，全部并行处理
+            await Promise.all(Array.from(banners).map((img, index) => processBannerImage(img, index)));
+        }
+
+        async function processBannerImage(img, index) {
+            if (img.dataset.aiProcessed) return;
+            img.dataset.aiProcessed = 'true';
+
+            const originalSrc = img.src || img.dataset.src || img.currentSrc;
+            if (!originalSrc?.startsWith('http')) return;
+
+            // 缓存 Key 包含 UTM 信息
+            const baseCacheKey = `banner_${index}_${originalSrc.slice(-50)}`;
+            const cacheKey = getUtmCacheKey(baseCacheKey);
+
+            // 检查缓存
+            const cachedUrl = getCachedUrl(cacheKey);
+            if (cachedUrl) {
+                log(`Using cached banner image ${index} (${cacheKey})`);
+                applyBannerImage(img, cachedUrl, true);  // skipAnimation = true
+                return;
+            }
+
+            const overlay = addLoadingOverlay(img);
+            log(`Processing banner ${index} (cache key: ${cacheKey})...`);
+
+            try {
+                const newUrl = await generateImage(originalSrc, 'banner', `banner_${index}`);
+
+                if (newUrl) {
+                    setSessionCache(cacheKey, newUrl);  // 使用包含 UTM 的 key
+                    if (overlay) overlay.remove();
+                    applyBannerImage(img, newUrl);
+                    log(`✅ Banner ${index} updated`);
+                } else {
+                    if (overlay) overlay.remove();
+                }
+            } catch (error) {
+                if (overlay) overlay.remove();
+                log('Banner error:', error);
+            }
+        }
+
+        function applyBannerImage(img, newUrl, skipAnimation = false) {
+            log(`Applying banner image...`);
+
+            const preload = new Image();
+            preload.crossOrigin = 'anonymous';
+
+            preload.onload = () => {
+                log(`✅ Banner image preloaded`);
+                img.removeAttribute('srcset');
+                img.removeAttribute('data-srcset');
+
+                const picture = img.closest('picture');
+                if (picture) {
+                    picture.querySelectorAll('source').forEach(s => s.remove());
+                }
+
+                if (!skipAnimation) {
+                    img.classList.add('ai-reveal');
+                }
+                img.src = newUrl;
+                log(`✅ Banner image applied`);
+            };
+
+            preload.onerror = (e) => {
+                log(`❌ Banner image preload failed, trying direct set...`);
+                img.src = newUrl;
+            };
+
+            preload.src = newUrl;
+        }
+
+        // =====================
+        // 产品详情页处理
+        // =====================
+
+        function findProductDetailImages() {
+            // 尝试多种容器选择器（Dawn 主题优先）
+            const containerSelectors = [
+                '.product__media-list',           // Dawn 主题
+                '.product__media-wrapper',        // Dawn 主题
+                'media-gallery',                  // Dawn custom element
+                'slider-component',               // Dawn slider
+                '.product__media-gallery',
+                '.product-gallery',
+                '.product__images',
+                '.product-images',
+                '[data-product-media-container]',
+                '.product-single__media-wrapper',
+                CONFIG.productMediaContainerSelector,
+            ];
+
+            let container = null;
+            for (const selector of containerSelectors) {
+                container = document.querySelector(selector);
+                if (container) {
+                    log('Found product media container:', selector);
+                    break;
+                }
+            }
+
+            if (!container) {
+                // 最后尝试：找包含多个产品图片的容器
+                const allProductImgs = document.querySelectorAll('[class*="product"] img, [data-product] img');
+                log('Fallback: found', allProductImgs.length, 'product images');
+                if (allProductImgs.length >= 2) {
+                    return {
+                        primary: allProductImgs[0],
+                        secondary: allProductImgs[1],
+                    };
+                }
+                log('No product media container found');
+                return { primary: null, secondary: null };
+            }
+
+            // 尝试多种媒体项选择器
+            const mediaItemSelectors = [
+                CONFIG.productMediaItemSelector,
+                '.product__media-item',
+                '.product-media-item',
+                '.media-gallery__item',
+                'li[data-media-id]',
+                '.product__media > *',
+            ];
+
+            let mediaItems = [];
+            for (const selector of mediaItemSelectors) {
+                mediaItems = container.querySelectorAll(selector);
+                if (mediaItems.length >= 2) {
+                    log('Found media items with:', selector, 'count:', mediaItems.length);
+                    break;
+                }
+            }
+
+            if (mediaItems.length < 2) {
+                // 直接找图片
+                const allImgs = container.querySelectorAll('img');
+                log('Direct image search in container, found:', allImgs.length);
+                return {
+                    primary: allImgs[0] || null,
+                    secondary: allImgs[1] || null,
+                };
+            }
+
+            const primaryImg = mediaItems[0]?.querySelector('img');
+            const secondaryImg = mediaItems[1]?.querySelector('img');
+
+            log('Primary img:', primaryImg?.src?.slice(0, 50));
+            log('Secondary img:', secondaryImg?.src?.slice(0, 50));
+
+            return { primary: primaryImg, secondary: secondaryImg };
+        }
+
+        async function processProductDetailPage() {
+            log('Processing product detail page...');
+
+            const productHandle = getProductHandleFromUrl();
+            if (!productHandle) {
+                log('❌ Could not extract product handle from URL');
+                return;
+            }
+            log('Product handle:', productHandle);
+
+            // 先检查内存缓存
+            const existing = generationState.get(productHandle);
+            if (existing?.status === 'done' && existing.imageUrl) {
+                log('Using memory cached result for:', productHandle);
+                applyToDetailPage(existing.imageUrl);
+                return;
+            }
+
+            // 再检查 sessionStorage 缓存（跨页面持久化，包含 UTM）
+            const cacheKey = getUtmCacheKey(productHandle);
+            const cachedUrl = getCachedUrl(cacheKey);
+            if (cachedUrl) {
+                log('Using session cached result for:', cacheKey);
+                applyToDetailPage(cachedUrl, true);  // skipAnimation = true
+                return;
+            }
+
+            log('No cache found, searching for product images...');
+            const { primary, secondary } = findProductDetailImages();
+
+            if (!primary) {
+                log('❌ No primary image found on detail page');
+                log('💡 Check if productMediaContainerSelector matches your theme');
+                return;
+            }
+
+            if (!secondary) {
+                log('❌ No secondary image found on detail page');
+                log('💡 This product may only have 1 image - need at least 2');
+                return;
+            }
+
+            log('✅ Found primary and secondary images');
+
+            const originalSrc = primary.src || primary.dataset.src || primary.currentSrc;
+            if (!originalSrc?.startsWith('http')) return;
+
+            // 添加 loading
+            const overlay = addLoadingOverlay(secondary);
+
+            log(`Processing detail page: ${productHandle}`);
+
+            try {
+                const newUrl = await generateImage(originalSrc, 'product', productHandle);
+
+                if (newUrl) {
+                    // 保存到内存和 sessionStorage（使用包含 UTM 的 key）
+                    generationState.set(productHandle, { status: 'done', imageUrl: newUrl });
+                    setSessionCache(cacheKey, newUrl);
+
+                    log(`Applying to detail page secondary image...`);
+                    const preload = new Image();
+                    preload.crossOrigin = 'anonymous';
+
+                    preload.onload = () => {
+                        log(`✅ Detail page image preloaded`);
+                        if (overlay) overlay.remove();
+
+                        // 清除 srcset 避免覆盖
+                        secondary.removeAttribute('srcset');
+                        secondary.removeAttribute('data-srcset');
+
+                        const picture = secondary.closest('picture');
+                        if (picture) {
+                            picture.querySelectorAll('source').forEach(s => s.remove());
+                        }
+
+                        secondary.classList.add('ai-reveal');
+                        secondary.src = newUrl;
+
+                        log(`✅ Detail page updated for ${productHandle}`);
+                    };
+
+                    preload.onerror = (e) => {
+                        log(`❌ Detail page image preload failed, trying direct set...`);
+                        if (overlay) overlay.remove();
+                        secondary.src = newUrl;
+                    };
+
+                    preload.src = newUrl;
+                } else {
+                    if (overlay) overlay.remove();
+                }
+            } catch (error) {
+                if (overlay) overlay.remove();
+                log('Error on detail page:', error);
+            }
+        }
+
+        function applyToDetailPage(imageUrl, skipAnimation = false) {
+            const { secondary } = findProductDetailImages();
+            if (!secondary) {
+                log('Cannot apply to detail page: secondary image not found');
+                return;
+            }
+
+            secondary.removeAttribute('srcset');
+            secondary.removeAttribute('data-srcset');
+
+            const picture = secondary.closest('picture');
+            if (picture) {
+                picture.querySelectorAll('source').forEach(s => s.remove());
+            }
+
+            if (!skipAnimation) {
+                secondary.classList.add('ai-reveal');
+            }
+            secondary.src = imageUrl;
+            log('Applied AI image to detail page (skipAnimation:', skipAnimation, ')');
+        }
+
+        // =====================
+        // 入口
+        // =====================
+
+        function init() {
+            log('AI Visual v2 checking conditions...');
+            log('URL:', window.location.href);
+            log('Referrer:', document.referrer);
+            log('UTM params:', getUtmParams());
+
+            if (!shouldProcess()) {
+                log('❌ No UTM/referrer detected, skipping AI generation');
+                log('💡 Tip: Add ?utm_source=test to URL to test');
+                return;
+            }
+
+            log('✅ AI Visual v2 initializing...');
+
+            const isProductPage = window.location.pathname.includes('/products/');
+            const isHomePage = window.location.pathname === '/' || window.location.pathname === '';
+            const isCollectionPage = window.location.pathname.includes('/collections/');
+
+            log('Page type:', { isHomePage, isCollectionPage, isProductPage });
+
+            // 收集所有需要执行的任务
+            const tasks = [];
+
+            // 首页或集合页：处理产品卡片和 Banner
+            if (isHomePage || isCollectionPage || !isProductPage) {
+                tasks.push(processAllProductCards());
+                tasks.push(processBannerImages());  // Banner 和产品卡片并行！
+            }
+
+            // 产品详情页：处理详情图
+            if (isProductPage) {
+                tasks.push(processProductDetailPage());
+            }
+
+            // 并行执行所有任务
+            Promise.all(tasks).then(() => {
+                log('All processing complete');
+            });
+        }
+
+        // 等待 DOM 和图片加载
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => setTimeout(init, 300));
+        } else {
+            setTimeout(init, 300);
+        }
+
+        // 监听 SPA 路由变化（Shopify 有些主题用 AJAX）
+        let lastUrl = location.href;
+        new MutationObserver(() => {
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                log('URL changed, re-initializing...');
+                setTimeout(init, 500);
+            }
+        }).observe(document.body, { subtree: true, childList: true });
+
+    })();
+</script>
