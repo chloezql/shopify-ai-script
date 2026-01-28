@@ -35,7 +35,8 @@ export async function generateScenePrompt(context: UserContext): Promise<string>
 }
 
 /**
- * 产品图：生成创意场景描述
+ * 产品图：生成创意场景描述（宠物产品专用）
+ * UTM信息是核心决策因素，突出产品的同时融入宠物元素
  */
 async function generateProductScenePrompt(
   client: OpenAI,
@@ -54,259 +55,270 @@ async function generateProductScenePrompt(
     }
   }
 
-  const systemPrompt = `You are a creative director for premium e-commerce product photography.
+  // 整理UTM信息
+  const utmInfo = formatUtmInfo(context);
 
-Your task: Design a product showcase scene that feels premium and aspirational.
+  const systemPrompt = `You are a creative director for premium PET PRODUCT e-commerce photography.
 
-CREATIVE FREEDOM:
-- You CAN change the product's position, size, and angle in the scene
-- You CAN design creative backgrounds and environments  
-- You CAN add RELEVANT props, surfaces, and atmospheric elements
+Your task: Design a product showcase scene that highlights the product while creating an emotionally engaging pet lifestyle atmosphere.
 
-QUALITY RULES:
-1. Keep it PREMIUM - think luxury brand campaigns (Apple, Nike, Glossier)
-2. Scene must feel REAL and NATURAL, not fake or CGI-looking
-3. Product should be the HERO - clearly visible and appealing
-4. Props and background must be RELEVANT to the product category
-5. Professional photography quality - good lighting, composition, depth
+## CRITICAL: UTM INFORMATION IS YOUR PRIMARY INPUT
+The UTM parameters tell you WHO the audience is, WHAT campaign they came from, and WHAT message resonates with them. Use this to drive your creative decisions:
 
-CRITICAL: The scene MUST match the product category and the product itself!
-- Analyze the product category and design a scene that makes sense for that specific type of product
-- Props, background, and atmosphere should all be RELEVANT to what the product is
-- Think about where this product would naturally be used or displayed
-- If there's no product information provided, just extract the product from the source image. 
-- If it's outdoor gear → outdoor setting. If it's home decor → home setting. And so on.
+Examples of how to interpret UTM info:
+- utm_source=instagram, utm_campaign=puppy_love_sale → trendy, shareable aesthetic, focus on adorable puppies
+- utm_source=google, utm_campaign=orthopedic_dog_beds → clean professional look, health-focused, senior dog comfort
+- utm_campaign=cat_comfort_collection, utm_content=cozy_winter → elegant cat, warm winter atmosphere, comfort focus
+- utm_source=tiktok, utm_campaign=playful_pups → dynamic, fun, action shot with energetic puppy
+- utm_term=SF_Bay_Area → modern, tech-savvy aesthetic, urban pet lifestyle
+- utm_campaign=rescue_adoption_awareness → heartwarming, emotional connection, second chances
 
-Output a scene description (max 25 words). Be specific about: surface, props, lighting, mood.`;
+## PRODUCT-FIRST APPROACH
+- The PRODUCT must be the clear focal point - prominent, well-lit, and sharp
+- Product should occupy a significant portion of the frame
+- Ensure product details, textures, and quality are clearly visible
 
-  // 解析广告内容主题
-  const adTheme = parseAdTheme(context.utmContent);
-  // 解析地区信息
-  const regionHint = parseRegion(context.utmTerm);
+## PET ELEMENT INTEGRATION (supporting role)
+- Add a cute pet (dog or cat) in the scene as a SUPPORTING element, not competing with the product
+- Pet can be: slightly blurred in background, peeking curiously, resting nearby, or showing interest in the product
+- Pet presence should create emotional connection WITHOUT overshadowing the product
+- Match pet type to product context and UTM signals
 
-  const userPrompt = `${productInfo ? productInfo + '\n' : ''}Time: ${context.timeOfDay}
+## QUALITY STANDARDS
+- Premium pet brand aesthetic (think Chewy, Wild One, Fable)
+- Real, authentic feel - not stock-photo generic
+- Professional product photography with lifestyle warmth
+- Emotional storytelling: love, care, companionship
+
+Output a detailed scene description. Be specific about: product placement, pet element (type, pose, position), surface/setting, lighting, mood, and any props. Quality over brevity.`;
+
+  const userPrompt = `## UTM & CAMPAIGN INFO (PRIMARY - use this to drive your decisions):
+${utmInfo}
+
+## CONTEXT (secondary):
+${productInfo ? productInfo + '\n' : ''}Time of day: ${context.timeOfDay}
 Season: ${context.season}
-Audience: ${styleHint}
-${adTheme ? `Ad theme: ${adTheme}` : ''}
-${regionHint ? `Region vibe: ${regionHint}` : ''}
-${context.utmCampaign ? `Campaign: ${context.utmCampaign.replace(/[_|+]/g, ' ')}` : ''}
+Platform style: ${styleHint}
 
-Design a premium showcase scene for this product:`;
+Design a premium pet product showcase scene. Let the UTM information guide your creative choices for pet type, mood, setting, and style:`;
 
   try {
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      max_tokens: 80,
+      max_tokens: 150,
       temperature: 0.7,
     });
 
     const result = response.choices[0]?.message?.content?.trim();
     if (!result) {
-      return generateFallbackPrompt(context);
+      const fallback = generateFallbackPrompt(context);
+      console.log('[Product Prompt] Using fallback:', fallback);
+      return fallback;
     }
-    return result.replace(/^["']|["']$/g, '');
+    const finalPrompt = result.replace(/^["']|["']$/g, '');
+    console.log('[Product Prompt] Generated:', finalPrompt);
+    return finalPrompt;
   } catch (error) {
     console.error('OpenAI error:', error);
-    return generateFallbackPrompt(context);
+    const fallback = generateFallbackPrompt(context);
+    console.log('[Product Prompt] Using fallback due to error:', fallback);
+    return fallback;
   }
 }
 
 /**
- * Banner 图：基于原图风格和构图，创意重构
- * 可以改变结构，但要保持原图的视觉语言和品牌调性
+ * Banner 图 (Hero Image)：为宠物品牌首页设计有冲击力的英雄图
+ * UTM信息是核心决策因素，完全重新设计创造情感连接
  */
 async function generateBannerStylePrompt(
   client: OpenAI,
   context: UserContext,
   styleHint: string
 ): Promise<string> {
-  const systemPrompt = `You are a creative director reimagining hero banners for e-commerce brands.
+  // 整理UTM信息
+  const utmInfo = formatUtmInfo(context);
 
-Your task: Describe a NEW banner design that draws inspiration from the original image's style, composition, and visual language.
+  const systemPrompt = `You are a creative director designing HERO BANNERS for a premium pet brand homepage.
 
-CREATIVE APPROACH:
-1. LEARN from the original: its color palette, composition style, visual elements, brand vibe
-2. REIMAGINE with the new context: adapt to the audience, time, season, campaign theme
-3. CREATE a fresh version that feels like a natural evolution, not a copy
+Your task: Create a COMPLETELY NEW hero image concept that captures the essence of pet-human bonding and drives emotional engagement.
 
-WHAT YOU CAN DO:
-- Change the overall composition and layout
-- Add or modify environmental elements
-- Adjust lighting, atmosphere, and mood dramatically
-- Introduce new props or background elements that fit the brand
-- Shift the visual style while keeping brand consistency
+## CRITICAL: UTM INFORMATION IS YOUR PRIMARY INPUT
+The UTM parameters tell you WHO the audience is, WHAT campaign they came from, and WHAT message resonates with them. This should DRIVE your entire creative direction:
 
-QUALITY STANDARDS:
-- Premium advertising quality (think Nike, Apple campaigns)
-- Cinematic and aspirational
-- Must feel cohesive with the brand's visual identity
-- Professional photography aesthetic
+Examples of how to interpret UTM and create matching hero images:
+- utm_source=instagram, utm_campaign=summer_adventure_dogs 
+  → Energetic golden retriever running on beach at golden hour, splashing through waves, pure joy and freedom, cinematic wide shot
+  
+- utm_source=facebook, utm_campaign=senior_pet_comfort, utm_content=orthopedic_beds
+  → Peaceful senior dog resting on plush bed by window, soft afternoon light, gentle eyes showing contentment, warm intimate mood
+  
+- utm_source=tiktok, utm_campaign=kitten_playtime
+  → Adorable kitten mid-pounce on colorful toy, bright playful energy, freeze-frame action, fun viral-worthy moment
+  
+- utm_campaign=rescue_stories, utm_content=adoption_love
+  → Rescued dog and owner tender moment on couch, emotional connection, heartwarming eye contact, soft natural light, storytelling composition
+  
+- utm_term=NYC_urban_pet_parents, utm_campaign=modern_pet_lifestyle
+  → Stylish french bulldog in minimalist modern apartment, city views through window, designer aesthetic, sophisticated urban vibe
+  
+- utm_campaign=holiday_gift_guide, utm_content=christmas_pets
+  → Cozy holiday scene with dog wearing festive bandana by fireplace, warm Christmas lights, family togetherness, magical atmosphere
 
-GOOD examples:
-- "Reimagine as a dramatic sunrise scene, golden light streaming through, same bold typography style, fresh energetic mood"
-- "Transform into an urban nightscape, city lights bokeh, modern sleek aesthetic, keep the dynamic diagonal composition"
-- "Evolve into a cozy winter setting, warm fireplace glow, soft textures, maintain the lifestyle aspirational feel"
+## HERO IMAGE REQUIREMENTS
+1. EMOTIONAL IMPACT
+   - Feature adorable pets (dogs/cats) as the emotional centerpiece
+   - Show genuine moments: playful energy, loyal companionship, cozy cuddles
+   - The image should make pet parents feel understood and inspired
 
-Output a creative direction (max 30 words). Be specific about: atmosphere, lighting, composition style, mood.`;
+2. HOMEPAGE-WORTHY COMPOSITION
+   - Cinematic, wide format suitable for hero banners
+   - Clear visual hierarchy with breathing room for text overlays
+   - Magazine-cover quality that stops the scroll
+   - Premium lifestyle photography aesthetic
 
-  // 解析广告内容主题和地区
-  const adTheme = parseAdTheme(context.utmContent);
-  const regionHint = parseRegion(context.utmTerm);
+3. BRAND-ALIGNED AESTHETICS
+   - Modern pet lifestyle aesthetic (Wild One, Fable Pets, Casper Dog vibes)
+   - Real, candid moments - NOT stock photo generic
+   - Aspirational yet relatable pet parent lifestyle
 
-  const userPrompt = `Time: ${context.timeOfDay}
+DO NOT:
+- Create generic pet store imagery
+- Make it feel like a product catalog
+- Use fake or overly posed looks
+- Create cluttered or busy compositions
+
+Output a detailed, vivid hero image concept. Be specific about: pet type & breed, action/pose, setting/environment, lighting, emotional tone, composition, and color mood. Quality over brevity.`;
+
+  const userPrompt = `## UTM & CAMPAIGN INFO (PRIMARY - this drives your creative direction):
+${utmInfo}
+
+## CONTEXT (secondary influence):
+Time of day: ${context.timeOfDay}
 Season: ${context.season}
-Target audience: ${styleHint}
-${adTheme ? `Campaign theme: ${adTheme}` : ''}
-${regionHint ? `Regional vibe: ${regionHint}` : ''}
-${context.utmCampaign ? `Campaign: ${context.utmCampaign.replace(/[_|+]/g, ' ')}` : ''}
+Platform style: ${styleHint}
 
-Reimagine this banner with a fresh creative direction:`;
+Create a stunning hero banner concept. Let the UTM information guide your pet choice, mood, setting, and overall creative direction:`;
 
   try {
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      max_tokens: 40,
-      temperature: 0.5,
+      max_tokens: 200,
+      temperature: 0.7,
     });
 
     const result = response.choices[0]?.message?.content?.trim();
     if (!result) {
-      return generateBannerFallbackPrompt(context);
+      const fallback = generateBannerFallbackPrompt(context);
+      console.log('[Banner Prompt] Using fallback:', fallback);
+      return fallback;
     }
-    return result.replace(/^["']|["']$/g, '');
+    const finalPrompt = result.replace(/^["']|["']$/g, '');
+    console.log('[Banner Prompt] Generated:', finalPrompt);
+    return finalPrompt;
   } catch (error) {
     console.error('OpenAI error:', error);
-    return generateBannerFallbackPrompt(context);
+    const fallback = generateBannerFallbackPrompt(context);
+    console.log('[Banner Prompt] Using fallback due to error:', fallback);
+    return fallback;
   }
 }
 
 /**
- * Banner 图的 fallback prompt
+ * Banner 图的 fallback prompt（宠物品牌专用）
  */
 function generateBannerFallbackPrompt(context: UserContext): string {
   const styleMap: Record<string, string> = {
-    morning: 'Fresh morning atmosphere, soft golden sunrise light, energetic and inspiring mood, clean modern composition',
-    afternoon: 'Bright vibrant scene, dynamic natural lighting, bold confident aesthetic, lifestyle aspirational feel',
-    evening: 'Warm golden hour glow, cozy inviting atmosphere, premium lifestyle mood, cinematic depth',
-    night: 'Sophisticated urban nightscape, elegant ambient lighting, modern luxury feel, dramatic contrast',
+    morning: 'Golden retriever stretching in warm morning sunlight, modern living room with designer pet bed, fresh energetic start to the day, magazine-quality lifestyle shot',
+    afternoon: 'Playful corgi mid-action in bright airy space, natural window light, joyful dynamic energy, happy pet parent lifestyle',
+    evening: 'Cat curled up on soft blanket with golden hour glow streaming through window, cozy warm atmosphere, peaceful contentment, cinematic warmth',
+    night: 'Peaceful sleeping puppy in elegant home setting, soft ambient lighting, calm serene mood, premium comfort aesthetic',
   };
   return styleMap[context.timeOfDay] || styleMap.afternoon;
 }
 
 /**
  * Get style preference based on traffic source
- * 根据来源匹配不同的视觉风格偏好
+ * 根据来源匹配不同的视觉风格偏好（宠物品牌专用）
  */
 function getStyleHint(source: string): string {
   const hints: Record<string, string> = {
-    instagram: 'lifestyle aspirational, curated aesthetic, warm and inviting',
-    tiktok: 'dynamic and fresh, modern energy, bold but tasteful',
-    facebook: 'relatable and approachable, warm comfortable feel',
-    google: 'clean and professional, product-centric, minimal distraction',
-    direct: 'versatile premium look, elegant sophistication',
+    instagram: 'aesthetic pet lifestyle, curated cozy moments, warm emotional connection, shareable cuteness',
+    tiktok: 'dynamic playful energy, trendy pet parent vibes, fun authentic moments, viral-worthy charm',
+    facebook: 'relatable pet family moments, heartwarming connection, trustworthy pet care, community feeling',
+    google: 'clean professional product focus, credible pet brand, quality-focused, informative clarity',
+    pinterest: 'aspirational pet home aesthetic, beautifully styled pet spaces, dreamy inspiration',
+    direct: 'premium pet lifestyle brand, modern pet parent aesthetic, elegant yet approachable',
   };
   return hints[source] || hints.direct;
 }
 
 /**
- * 解析广告内容主题 (utm_content)
- * 例如: "New+Year+New+Posture+-+video" → "New Year, fresh start theme"
+ * 格式化UTM信息，清理并整理成可读格式给模型
+ * 让模型自己理解和解析这些信息
  */
-function parseAdTheme(utmContent?: string): string | undefined {
-  if (!utmContent) return undefined;
+function formatUtmInfo(context: UserContext): string {
+  const parts: string[] = [];
 
-  // 清理 URL 编码
-  const cleaned = decodeURIComponent(utmContent)
-    .replace(/\+/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-
-  // 识别常见主题关键词
-  const themes: Record<string, string> = {
-    'new year': 'fresh start, renewal, new beginnings',
-    'christmas': 'festive, warm, holiday spirit',
-    'holiday': 'festive, celebration, warm',
-    'summer': 'bright, vibrant, energetic',
-    'spring': 'fresh, light, renewal',
-    'winter': 'cozy, elegant, crisp',
-    'sale': 'exciting, urgent, value',
-    'launch': 'fresh, new, innovative',
-    'limited': 'exclusive, premium, special',
+  // 清理函数：将URL编码和分隔符转为可读文本
+  const cleanUtmValue = (value: string): string => {
+    return decodeURIComponent(value)
+      .replace(/\+/g, ' ')
+      .replace(/_/g, ' ')
+      .replace(/-/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   };
 
-  for (const [keyword, theme] of Object.entries(themes)) {
-    if (cleaned.includes(keyword)) {
-      return theme;
-    }
+  if (context.utmSource) {
+    parts.push(`utm_source: ${context.utmSource}`);
+  }
+  if (context.utmMedium) {
+    parts.push(`utm_medium: ${cleanUtmValue(context.utmMedium)}`);
+  }
+  if (context.utmCampaign) {
+    parts.push(`utm_campaign: ${cleanUtmValue(context.utmCampaign)}`);
+  }
+  if (context.utmContent) {
+    parts.push(`utm_content: ${cleanUtmValue(context.utmContent)}`);
+  }
+  if (context.utmTerm) {
+    parts.push(`utm_term: ${cleanUtmValue(context.utmTerm)}`);
   }
 
-  // 如果没有匹配，返回清理后的内容（前30字符）
-  return cleaned.substring(0, 30) || undefined;
+  // 如果没有任何UTM信息
+  if (parts.length === 0) {
+    return 'No UTM parameters available - use general premium pet brand aesthetic';
+  }
+
+  return parts.join('\n');
 }
 
 /**
- * 解析地区信息 (utm_term)
- * 例如: "Lookalikes_SF+Bay+Area" → "urban California, tech-savvy"
- */
-function parseRegion(utmTerm?: string): string | undefined {
-  if (!utmTerm) return undefined;
-
-  const cleaned = decodeURIComponent(utmTerm)
-    .replace(/\+/g, ' ')
-    .replace(/_/g, ' ')
-    .toLowerCase();
-
-  // 识别地区关键词并返回视觉风格提示
-  const regions: Record<string, string> = {
-    'sf': 'urban California, tech-forward, modern',
-    'bay area': 'urban California, tech-savvy, contemporary',
-    'la': 'sunny California, lifestyle, aspirational',
-    'los angeles': 'sunny California, glamorous, lifestyle',
-    'ny': 'urban sophisticated, dynamic, cosmopolitan',
-    'new york': 'urban chic, sophisticated, fast-paced',
-    'miami': 'vibrant tropical, colorful, beach lifestyle',
-    'chicago': 'urban, classic, refined',
-    'texas': 'warm, open, authentic',
-    'seattle': 'modern, green, tech-forward',
-  };
-
-  for (const [keyword, vibe] of Object.entries(regions)) {
-    if (cleaned.includes(keyword)) {
-      return vibe;
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Generate fallback prompt without API call
+ * Generate fallback prompt without API call（宠物产品专用）
  */
 function generateFallbackPrompt(context: UserContext): string {
-  // Time-based scene suggestions
+  // Time-based scene suggestions with pet elements
   const sceneMap: Record<string, string> = {
-    morning: 'Product on clean marble surface, soft morning light streaming in, fresh minimal aesthetic',
-    afternoon: 'Hero shot with dramatic studio lighting, clean gradient background, premium focus',
-    evening: 'Warm ambient setting, product on wood surface, golden hour glow, lifestyle mood',
-    night: 'Elegant low-key lighting, product on dark textured surface, sophisticated premium feel',
+    morning: 'Product prominently displayed on natural wood surface, curious puppy peeking from behind, soft morning light, cozy home setting',
+    afternoon: 'Product hero shot on clean surface, playful cat paw reaching toward it, bright natural lighting, premium pet lifestyle aesthetic',
+    evening: 'Product on cozy blanket surface, sleepy dog curled up nearby, warm golden hour glow through window, homey atmosphere',
+    night: 'Product elegantly lit on textured surface, peaceful sleeping pet in soft focus background, warm ambient lighting, serene mood',
   };
 
   // Season-based mood enhancement
   const seasonMood: Record<string, string> = {
-    spring: 'fresh and light atmosphere',
-    summer: 'bright and vibrant energy',
-    autumn: 'warm and rich tones',
-    winter: 'crisp and elegant mood',
+    spring: 'fresh spring energy with blooming pet-friendly plants nearby',
+    summer: 'bright vibrant summer vibes with happy energetic pet presence',
+    autumn: 'warm cozy autumn tones with snuggly pet atmosphere',
+    winter: 'crisp elegant winter mood with cozy indoor pet comfort',
   };
 
   return `${sceneMap[context.timeOfDay]}, ${seasonMood[context.season]}`;
