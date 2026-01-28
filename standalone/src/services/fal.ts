@@ -100,11 +100,16 @@ export async function generateProductBackground(
 function buildPrompt(basePrompt: string, imageType: ImageType): string {
     if (imageType === 'product') {
         // 产品图：产品细节不变，但可以自由设计展示场景
-        return `Transform into premium advertising image.
-The product itself must stay unchanged (same appearance, color, texture, details).
-You CAN freely adjust: product position, size, angle, background, scene composition, add relevant props.
-Scene design: ${basePrompt}
-Quality: High-end e-commerce photography, luxury brand aesthetic.`;
+        return `Transform into premium advertising product photoshot.
+
+PRODUCT RULES:
+- The product itself must stay unchanged (same appearance, color, texture, details)
+- You CAN freely adjust: product position, size, angle, background, scene composition
+
+SCENE REQUIREMENTS:
+${basePrompt}
+
+QUALITY: High-end e-commerce photography, luxury brand aesthetic.`;
     } else {
         // Banner 图：基于原图风格创意重构
         return `Reimagine this banner image with a fresh creative direction.

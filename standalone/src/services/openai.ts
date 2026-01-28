@@ -60,47 +60,50 @@ async function generateProductScenePrompt(
 
   const systemPrompt = `You are a creative director for premium PET PRODUCT e-commerce photography.
 
-Your task: Design a product showcase scene that highlights the product while creating an emotionally engaging pet lifestyle atmosphere.
+Your task: Generate a structured scene prompt with 3 clear sections.
 
-## CRITICAL: UTM INFORMATION IS YOUR PRIMARY INPUT
-The UTM parameters tell you WHO the audience is, WHAT campaign they came from, and WHAT message resonates with them. Use this to drive your creative decisions:
+## CRITICAL: PRESERVE UTM KEYWORDS
+Any specific pet type or breed mentioned in UTM parameters MUST appear in your output:
+- If UTM says "cat" → your prompt MUST mention a cat
+- If UTM says "dog" or specific breed (golden retriever, corgi, etc.) → MUST include that exact pet
+- If UTM says "kitten" or "puppy" → MUST use that exact term
+- NEVER change cat→dog or dog→cat. The UTM pet type is MANDATORY.
 
-Examples of how to interpret UTM info:
-- utm_source=instagram, utm_campaign=puppy_love_sale → trendy, shareable aesthetic, focus on adorable puppies
-- utm_source=google, utm_campaign=orthopedic_dog_beds → clean professional look, health-focused, senior dog comfort
-- utm_campaign=cat_comfort_collection, utm_content=cozy_winter → elegant cat, warm winter atmosphere, comfort focus
-- utm_source=tiktok, utm_campaign=playful_pups → dynamic, fun, action shot with energetic puppy
-- utm_term=SF_Bay_Area → modern, tech-savvy aesthetic, urban pet lifestyle
-- utm_campaign=rescue_adoption_awareness → heartwarming, emotional connection, second chances
+## UTM INTERPRETATION EXAMPLES
+- utm_campaign=cat_beds_winter, utm_content=cozy_cat → "PET: A fluffy cat curled up contentedly..."
+- utm_term=golden_retriever_lovers → "PET: A golden retriever resting nearby..."
+- utm_campaign=puppy_essentials → "PET: An adorable puppy sniffing curiously..."
+- utm_term=SF_Bay_Area, utm_campaign=modern_cat_furniture → "PET: A sleek cat in modern urban setting..."
 
-## PRODUCT-FIRST APPROACH
-- The PRODUCT must be the clear focal point - prominent, well-lit, and sharp
-- Product should occupy a significant portion of the frame
-- Ensure product details, textures, and quality are clearly visible
+## OUTPUT FORMAT (follow this structure exactly)
+Generate a prompt with these 3 sections:
 
-## PET ELEMENT INTEGRATION (supporting role)
-- Add a cute pet (dog or cat) in the scene as a SUPPORTING element, not competing with the product
-- Pet can be: slightly blurred in background, peeking curiously, resting nearby, or showing interest in the product
-- Pet presence should create emotional connection WITHOUT overshadowing the product
-- Match pet type to product context and UTM signals
+1. PET ELEMENT (REQUIRED):
+   - Specify exact pet type from UTM (cat/dog/specific breed)
+   - Describe what the pet is doing (using the product, resting nearby, playing, curious about it)
+   - The pet should interact with or show interest in the product
+   
+2. SCENE SETTING:
+   - Environment that matches UTM campaign theme
+   - Surface, background, props
+   - Lighting and mood
+   
+3. COMPOSITION:
+   - Product as hero, pet as emotional anchor
+   - Camera angle and framing
 
-## QUALITY STANDARDS
-- Premium pet brand aesthetic (think Chewy, Wild One, Fable)
-- Real, authentic feel - not stock-photo generic
-- Professional product photography with lifestyle warmth
-- Emotional storytelling: love, care, companionship
+Keep output under 150 words. Be specific and visual.`;
 
-Output a detailed scene description. Be specific about: product placement, pet element (type, pose, position), surface/setting, lighting, mood, and any props. Quality over brevity.`;
-
-  const userPrompt = `## UTM & CAMPAIGN INFO (PRIMARY - use this to drive your decisions):
+  const userPrompt = `## UTM INFO (EXTRACT PET TYPE AND KEYWORDS FROM HERE):
 ${utmInfo}
 
-## CONTEXT (secondary):
-${productInfo ? productInfo + '\n' : ''}Time of day: ${context.timeOfDay}
-Season: ${context.season}
-Platform style: ${styleHint}
+## PRODUCT CONTEXT:
+${productInfo ? productInfo + '\n' : ''}Time: ${context.timeOfDay}, ${context.season}
+Style: ${styleHint}
 
-Design a premium pet product showcase scene. Let the UTM information guide your creative choices for pet type, mood, setting, and style:`;
+IMPORTANT: Look for pet keywords in the UTM parameters above (cat, dog, kitten, puppy, breed names). These MUST appear in your output.
+
+Generate a structured scene prompt with: 1) PET ELEMENT 2) SCENE SETTING 3) COMPOSITION:`;
 
   try {
     const response = await client.chat.completions.create({
@@ -262,40 +265,75 @@ function getStyleHint(source: string): string {
 
 /**
  * 格式化UTM信息，清理并整理成可读格式给模型
- * 让模型自己理解和解析这些信息
+ * 保留原始关键词便于模型识别
  */
 function formatUtmInfo(context: UserContext): string {
   const parts: string[] = [];
 
-  // 清理函数：将URL编码和分隔符转为可读文本
+  // 清理函数：将URL编码转为可读文本，但保留关键分隔符以保持词汇完整性
   const cleanUtmValue = (value: string): string => {
     return decodeURIComponent(value)
       .replace(/\+/g, ' ')
-      .replace(/_/g, ' ')
-      .replace(/-/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   };
 
+  // 提取宠物相关关键词
+  const extractPetKeywords = (value: string): string[] => {
+    const keywords: string[] = [];
+    const petPatterns = [
+      /\b(cat|cats|kitten|kittens|feline)\b/gi,
+      /\b(dog|dogs|puppy|puppies|canine)\b/gi,
+      /\b(golden.?retriever|corgi|bulldog|poodle|labrador|husky|beagle|terrier|shiba|persian|siamese|maine.?coon|ragdoll|british.?shorthair)\b/gi,
+    ];
+    for (const pattern of petPatterns) {
+      const matches = value.match(pattern);
+      if (matches) {
+        keywords.push(...matches.map(m => m.toLowerCase()));
+      }
+    }
+    return [...new Set(keywords)];
+  };
+
+  // 收集所有UTM值用于提取宠物关键词
+  const allUtmValues: string[] = [];
+
   if (context.utmSource) {
     parts.push(`utm_source: ${context.utmSource}`);
+    allUtmValues.push(context.utmSource);
   }
   if (context.utmMedium) {
-    parts.push(`utm_medium: ${cleanUtmValue(context.utmMedium)}`);
+    const cleaned = cleanUtmValue(context.utmMedium);
+    parts.push(`utm_medium: ${cleaned}`);
+    allUtmValues.push(cleaned);
   }
   if (context.utmCampaign) {
-    parts.push(`utm_campaign: ${cleanUtmValue(context.utmCampaign)}`);
+    const cleaned = cleanUtmValue(context.utmCampaign);
+    parts.push(`utm_campaign: ${cleaned}`);
+    allUtmValues.push(cleaned);
   }
   if (context.utmContent) {
-    parts.push(`utm_content: ${cleanUtmValue(context.utmContent)}`);
+    const cleaned = cleanUtmValue(context.utmContent);
+    parts.push(`utm_content: ${cleaned}`);
+    allUtmValues.push(cleaned);
   }
   if (context.utmTerm) {
-    parts.push(`utm_term: ${cleanUtmValue(context.utmTerm)}`);
+    const cleaned = cleanUtmValue(context.utmTerm);
+    // utm_term 通常包含受众定向信息，可能有宠物类型/品种
+    parts.push(`utm_term (audience/targeting): ${cleaned}`);
+    allUtmValues.push(cleaned);
   }
 
   // 如果没有任何UTM信息
   if (parts.length === 0) {
     return 'No UTM parameters available - use general premium pet brand aesthetic';
+  }
+
+  // 提取并高亮显示宠物关键词
+  const allText = allUtmValues.join(' ');
+  const petKeywords = extractPetKeywords(allText);
+  if (petKeywords.length > 0) {
+    parts.push(`\n⚠️ DETECTED PET KEYWORDS (MUST USE): ${petKeywords.join(', ')}`);
   }
 
   return parts.join('\n');
