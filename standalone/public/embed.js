@@ -32,17 +32,130 @@
         }
     };
 
+    // =====================
+    // UTM 参数持久化（跨页面保留 UTM）
+    // =====================
+
+    const UTM_STORAGE_KEY = 'ai_visual_utm';
+    const UTM_SESSION_KEY = 'ai_visual_utm_session'; // 标记当前会话是否有 UTM
+
     /**
-     * Get UTM parameters from URL
+     * 检查是否是站内跳转（referrer 是同站）
+     */
+    function isInternalNavigation() {
+        const referrer = document.referrer;
+        if (!referrer) return false;
+        try {
+            const referrerHost = new URL(referrer).hostname;
+            const currentHost = window.location.hostname;
+            return referrerHost === currentHost;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * 从 sessionStorage 获取 UTM 参数
+     */
+    function getUtmFromSession() {
+        try {
+            const data = sessionStorage.getItem(UTM_STORAGE_KEY);
+            if (!data) return null;
+            return JSON.parse(data);
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * 检查当前会话是否已经有过 UTM
+     */
+    function hasUtmSession() {
+        return sessionStorage.getItem(UTM_SESSION_KEY) === 'true';
+    }
+
+    /**
+     * 保存 UTM 参数到 sessionStorage
+     * 完全覆盖：部分 UTM 时，没有的字段留空
+     */
+    function saveUtmToSession() {
+        const params = new URLSearchParams(window.location.search);
+        const utmSource = params.get('utm_source');
+        const utmMedium = params.get('utm_medium');
+        const utmCampaign = params.get('utm_campaign');
+        const utmContent = params.get('utm_content');
+        const utmTerm = params.get('utm_term');
+
+        // 只有当 URL 中有 UTM 参数时才保存
+        if (utmSource || utmCampaign) {
+            // 完全覆盖，没有的字段就是 null
+            const utmData = {
+                utmSource: utmSource || null,
+                utmMedium: utmMedium || null,
+                utmCampaign: utmCampaign || null,
+                utmContent: utmContent || null,
+                utmTerm: utmTerm || null,
+            };
+            try {
+                sessionStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utmData));
+                sessionStorage.setItem(UTM_SESSION_KEY, 'true');
+                log('📦 UTM saved to session:', utmData);
+            } catch (e) {
+                log('UTM save error:', e);
+            }
+        } else if (!isInternalNavigation()) {
+            // 外部进入且没有 UTM → 清除之前的 UTM（新访问）
+            sessionStorage.removeItem(UTM_STORAGE_KEY);
+            sessionStorage.removeItem(UTM_SESSION_KEY);
+            log('🗑️ External visit without UTM, cleared session');
+        }
+    }
+
+    // 页面加载时立即处理 UTM
+    saveUtmToSession();
+
+    /**
+     * Get UTM parameters (from URL or sessionStorage for internal navigation)
      */
     function getUtmParams() {
+        // 优先从 URL 读取
         const params = new URLSearchParams(window.location.search);
+        const urlUtmSource = params.get('utm_source');
+        const urlUtmCampaign = params.get('utm_campaign');
+
+        // 如果 URL 有 UTM 参数，使用 URL 的
+        if (urlUtmSource || urlUtmCampaign) {
+            return {
+                utmSource: urlUtmSource || undefined,
+                utmMedium: params.get('utm_medium') || undefined,
+                utmCampaign: urlUtmCampaign || undefined,
+                utmContent: params.get('utm_content') || undefined,  // 广告内容主题
+                utmTerm: params.get('utm_term') || undefined,        // 受众定向/地区
+            };
+        }
+
+        // 只有「站内跳转 + 此会话有过 UTM」时才从 sessionStorage 读取
+        if (isInternalNavigation() && hasUtmSession()) {
+            const savedUtm = getUtmFromSession();
+            if (savedUtm) {
+                log('📂 Using UTM from session (internal navigation):', savedUtm);
+                return {
+                    utmSource: savedUtm.utmSource || undefined,
+                    utmMedium: savedUtm.utmMedium || undefined,
+                    utmCampaign: savedUtm.utmCampaign || undefined,
+                    utmContent: savedUtm.utmContent || undefined,
+                    utmTerm: savedUtm.utmTerm || undefined,
+                };
+            }
+        }
+
+        // 没有任何 UTM 参数
         return {
-            utmSource: params.get('utm_source') || undefined,
-            utmMedium: params.get('utm_medium') || undefined,
-            utmCampaign: params.get('utm_campaign') || undefined,
-            utmContent: params.get('utm_content') || undefined,  // 广告内容主题
-            utmTerm: params.get('utm_term') || undefined,        // 受众定向/地区
+            utmSource: undefined,
+            utmMedium: undefined,
+            utmCampaign: undefined,
+            utmContent: undefined,
+            utmTerm: undefined,
         };
     }
 

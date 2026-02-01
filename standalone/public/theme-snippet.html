@@ -39,6 +39,10 @@
             productMediaItemSelector: '.product__media-item, .product-media, .product__photo-wrapper, li[data-media-id], .media-gallery__item, .product__media-item--image',
             // Banner/Hero Image 选择器
             bannerSelector: '.banner__media img, .hero-banner img, .slideshow__image, .hero__image img, .image-hero img',
+            // Collection Image 选择器
+            collectionImageSelector: '.collection-card-wrapper img, .collection-list__item img, .collection-hero img, .collection__image img',
+            // Image with Text 选择器
+            imageWithTextSelector: '.image-with-text__media img, .image-with-text__media-item img, .image-with-text img',
             maxConcurrent: 8,  // 最大并发生成数（可调整：4-12）
             timeout: 60000,
             debug: true,
@@ -50,6 +54,88 @@
 
         // 生成状态管理（内存缓存）
         const generationState = new Map(); // key -> { status, imageUrl, targetImg }
+
+        // =====================
+        // UTM 参数持久化（跨页面保留 UTM）
+        // =====================
+
+        const UTM_STORAGE_KEY = 'ai_visual_utm';
+        const UTM_SESSION_KEY = 'ai_visual_utm_session'; // 标记当前会话是否有 UTM
+
+        /**
+         * 检查是否是站内跳转（referrer 是同站）
+         */
+        function isInternalNavigation() {
+            const referrer = document.referrer;
+            if (!referrer) return false;
+            try {
+                const referrerHost = new URL(referrer).hostname;
+                const currentHost = window.location.hostname;
+                return referrerHost === currentHost;
+            } catch {
+                return false;
+            }
+        }
+
+        /**
+         * 从 sessionStorage 获取 UTM 参数
+         */
+        function getUtmFromSession() {
+            try {
+                const data = sessionStorage.getItem(UTM_STORAGE_KEY);
+                if (!data) return null;
+                return JSON.parse(data);
+            } catch {
+                return null;
+            }
+        }
+
+        /**
+         * 检查当前会话是否已经有过 UTM（用于判断站内跳转时是否应该使用存储的 UTM）
+         */
+        function hasUtmSession() {
+            return sessionStorage.getItem(UTM_SESSION_KEY) === 'true';
+        }
+
+        /**
+         * 保存 UTM 参数到 sessionStorage
+         * 完全覆盖：部分 UTM 时，没有的字段留空
+         */
+        function saveUtmToSession() {
+            const params = new URLSearchParams(window.location.search);
+            const utmSource = params.get('utm_source');
+            const utmMedium = params.get('utm_medium');
+            const utmCampaign = params.get('utm_campaign');
+            const utmContent = params.get('utm_content');
+            const utmTerm = params.get('utm_term');
+
+            // 只有当 URL 中有 UTM 参数时才保存
+            if (utmSource || utmCampaign) {
+                // 完全覆盖，没有的字段就是 null
+                const utmData = {
+                    utmSource: utmSource || null,
+                    utmMedium: utmMedium || null,
+                    utmCampaign: utmCampaign || null,
+                    utmContent: utmContent || null,
+                    utmTerm: utmTerm || null,
+                };
+                try {
+                    sessionStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utmData));
+                    sessionStorage.setItem(UTM_SESSION_KEY, 'true'); // 标记此会话有 UTM
+                    log('📦 UTM saved to session:', utmData);
+                } catch (e) {
+                    log('UTM save error:', e);
+                }
+            } else if (!isInternalNavigation()) {
+                // 外部进入且没有 UTM → 清除之前的 UTM（新访问）
+                sessionStorage.removeItem(UTM_STORAGE_KEY);
+                sessionStorage.removeItem(UTM_SESSION_KEY);
+                log('🗑️ External visit without UTM, cleared session');
+            }
+        }
+
+        // 页面加载时立即处理 UTM
+        saveUtmToSession();
 
         // =====================
         // SessionStorage 缓存（跨页面持久化）
@@ -195,13 +281,44 @@
         // =====================
 
         function getUtmParams() {
+            // 优先从 URL 读取
             const params = new URLSearchParams(window.location.search);
+            const urlUtmSource = params.get('utm_source');
+            const urlUtmCampaign = params.get('utm_campaign');
+
+            // 如果 URL 有 UTM 参数，使用 URL 的
+            if (urlUtmSource || urlUtmCampaign) {
+                return {
+                    utmSource: urlUtmSource || undefined,
+                    utmMedium: params.get('utm_medium') || undefined,
+                    utmCampaign: urlUtmCampaign || undefined,
+                    utmContent: params.get('utm_content') || undefined,
+                    utmTerm: params.get('utm_term') || undefined,
+                };
+            }
+
+            // 只有「站内跳转 + 此会话有过 UTM」时才从 sessionStorage 读取
+            if (isInternalNavigation() && hasUtmSession()) {
+                const savedUtm = getUtmFromSession();
+                if (savedUtm) {
+                    log('📂 Using UTM from session (internal navigation):', savedUtm);
+                    return {
+                        utmSource: savedUtm.utmSource || undefined,
+                        utmMedium: savedUtm.utmMedium || undefined,
+                        utmCampaign: savedUtm.utmCampaign || undefined,
+                        utmContent: savedUtm.utmContent || undefined,
+                        utmTerm: savedUtm.utmTerm || undefined,
+                    };
+                }
+            }
+
+            // 没有任何 UTM 参数
             return {
-                utmSource: params.get('utm_source') || undefined,
-                utmMedium: params.get('utm_medium') || undefined,
-                utmCampaign: params.get('utm_campaign') || undefined,
-                utmContent: params.get('utm_content') || undefined,
-                utmTerm: params.get('utm_term') || undefined,
+                utmSource: undefined,
+                utmMedium: undefined,
+                utmCampaign: undefined,
+                utmContent: undefined,
+                utmTerm: undefined,
             };
         }
 
@@ -233,16 +350,63 @@
             return match ? match[1] : null;
         }
 
+        function getCollectionInfo() {
+            // 从 URL 获取 collection handle
+            const urlMatch = window.location.pathname.match(/\/collections\/([^?#\/]+)/);
+            const collectionHandle = urlMatch ? urlMatch[1] : null;
+
+            // 从 Shopify Analytics 获取
+            const shopifyCollection = window.ShopifyAnalytics?.meta?.page?.pageType === 'collection'
+                ? window.ShopifyAnalytics.meta.page
+                : null;
+
+            // 从 DOM 获取 collection 标题
+            const titleElement = document.querySelector('.collection-hero__title, .collection__title, h1.title, .page-header__title');
+            const collectionTitle = titleElement?.textContent?.trim() || null;
+
+            // 从 DOM 获取 collection 描述
+            const descElement = document.querySelector('.collection-hero__description, .collection__description, .rte');
+            const collectionDescription = descElement?.textContent?.trim()?.slice(0, 200) || null;
+
+            // 获取页面上的产品名称列表
+            const productNames = [];
+            const productCards = document.querySelectorAll('.product-card-wrapper, .card-wrapper, .product-card');
+            productCards.forEach(card => {
+                const nameEl = card.querySelector('.card__heading, .product-card__title, .card-information__text, h3 a');
+                if (nameEl) {
+                    const name = nameEl.textContent?.trim();
+                    if (name && productNames.length < 5) {  // 最多取5个
+                        productNames.push(name);
+                    }
+                }
+            });
+
+            const info = {
+                handle: collectionHandle,
+                title: collectionTitle || collectionHandle?.replace(/-/g, ' '),
+                description: collectionDescription,
+                productNames: productNames,
+                productCount: productCards.length,
+            };
+
+            log('Collection info:', info);
+            return info;
+        }
+
         // =====================
         // API 请求
         // =====================
 
         async function generateImage(imageUrl, imageType, productName = '') {
+            return generateImageWithContext(imageUrl, imageType, { productName });
+        }
+
+        async function generateImageWithContext(imageUrl, imageType, extraContext = {}) {
             const context = {
                 ...getUtmParams(),
                 referrer: document.referrer,
                 ...getTimeContext(),
-                productName,
+                ...extraContext,
             };
             log('Generating:', { imageUrl, imageType, context });
 
@@ -659,6 +823,154 @@
         }
 
         // =====================
+        // Collection Image 处理
+        // =====================
+
+        async function processCollectionImages() {
+            const collectionImgs = document.querySelectorAll(CONFIG.collectionImageSelector);
+            if (collectionImgs.length === 0) {
+                log('No collection images found');
+                return;
+            }
+
+            log(`Found ${collectionImgs.length} collection images`);
+
+            // 获取 Collection 信息
+            const collectionInfo = getCollectionInfo();
+
+            await Promise.all(Array.from(collectionImgs).map((img, index) =>
+                processCollectionImage(img, index, collectionInfo)
+            ));
+        }
+
+        async function processCollectionImage(img, index, collectionInfo) {
+            if (img.dataset.aiProcessed) return;
+            img.dataset.aiProcessed = 'true';
+
+            const originalSrc = img.src || img.dataset.src || img.currentSrc;
+            if (!originalSrc?.startsWith('http')) return;
+
+            const baseCacheKey = `collection_${collectionInfo.handle || index}_${originalSrc.slice(-30)}`;
+            const cacheKey = getUtmCacheKey(baseCacheKey);
+
+            // 检查缓存
+            const cachedUrl = getCachedUrl(cacheKey);
+            if (cachedUrl) {
+                log(`Using cached collection image ${index}`);
+                applyGenericImage(img, cachedUrl, true);
+                return;
+            }
+
+            const overlay = addLoadingOverlay(img);
+            log(`Processing collection ${index} with info:`, collectionInfo);
+
+            try {
+                // 传递 collection 信息给 API
+                const newUrl = await generateImageWithContext(originalSrc, 'collection', {
+                    collectionTitle: collectionInfo.title,
+                    collectionDescription: collectionInfo.description,
+                    productNames: collectionInfo.productNames,
+                    productCount: collectionInfo.productCount,
+                });
+
+                if (newUrl) {
+                    setSessionCache(cacheKey, newUrl);
+                    if (overlay) overlay.remove();
+                    applyGenericImage(img, newUrl);
+                    log(`✅ Collection ${index} updated`);
+                } else {
+                    if (overlay) overlay.remove();
+                }
+            } catch (error) {
+                if (overlay) overlay.remove();
+                log('Collection error:', error);
+            }
+        }
+
+        // =====================
+        // Image with Text 处理
+        // =====================
+
+        async function processImageWithTextImages() {
+            const images = document.querySelectorAll(CONFIG.imageWithTextSelector);
+            if (images.length === 0) {
+                log('No image-with-text images found');
+                return;
+            }
+
+            log(`Found ${images.length} image-with-text images`);
+            await Promise.all(Array.from(images).map((img, index) => processGenericImage(img, 'imageWithText', index)));
+        }
+
+        // =====================
+        // 通用图片处理（Collection, Image with Text 等）
+        // =====================
+
+        async function processGenericImage(img, type, index) {
+            if (img.dataset.aiProcessed) return;
+            img.dataset.aiProcessed = 'true';
+
+            const originalSrc = img.src || img.dataset.src || img.currentSrc;
+            if (!originalSrc?.startsWith('http')) return;
+
+            const baseCacheKey = `${type}_${index}_${originalSrc.slice(-50)}`;
+            const cacheKey = getUtmCacheKey(baseCacheKey);
+
+            // 检查缓存
+            const cachedUrl = getCachedUrl(cacheKey);
+            if (cachedUrl) {
+                log(`Using cached ${type} image ${index}`);
+                applyGenericImage(img, cachedUrl, true);
+                return;
+            }
+
+            const overlay = addLoadingOverlay(img);
+            log(`Processing ${type} ${index} (cache key: ${cacheKey})...`);
+
+            try {
+                const newUrl = await generateImage(originalSrc, 'banner', `${type}_${index}`);
+
+                if (newUrl) {
+                    setSessionCache(cacheKey, newUrl);
+                    if (overlay) overlay.remove();
+                    applyGenericImage(img, newUrl);
+                    log(`✅ ${type} ${index} updated`);
+                } else {
+                    if (overlay) overlay.remove();
+                }
+            } catch (error) {
+                if (overlay) overlay.remove();
+                log(`${type} error:`, error);
+            }
+        }
+
+        function applyGenericImage(img, newUrl, skipAnimation = false) {
+            const preload = new Image();
+            preload.crossOrigin = 'anonymous';
+
+            preload.onload = () => {
+                img.removeAttribute('srcset');
+                img.removeAttribute('data-srcset');
+
+                const picture = img.closest('picture');
+                if (picture) {
+                    picture.querySelectorAll('source').forEach(s => s.remove());
+                }
+
+                if (!skipAnimation) {
+                    img.classList.add('ai-reveal');
+                }
+                img.src = newUrl;
+            };
+
+            preload.onerror = () => {
+                img.src = newUrl;
+            };
+
+            preload.src = newUrl;
+        }
+
+        // =====================
         // 产品详情页处理
         // =====================
 
@@ -887,10 +1199,13 @@
             // 收集所有需要执行的任务
             const tasks = [];
 
-            // 首页或集合页：处理产品卡片和 Banner
+            // 首页或集合页：处理产品卡片、Banner、Collection、Image with Text
             if (isHomePage || isCollectionPage || !isProductPage) {
                 tasks.push(processAllProductCards());
-                tasks.push(processBannerImages());  // Banner 和产品卡片并行！
+                tasks.push(processBannerImages());
+                tasks.push(processCollectionImages());      // Collection 图片
+                tasks.push(processImageWithTextImages());   // Image with Text 图片
+                // 全部并行执行！
             }
 
             // 产品详情页：处理详情图
