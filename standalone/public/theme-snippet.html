@@ -109,6 +109,15 @@
             const utmContent = params.get('utm_content');
             const utmTerm = params.get('utm_term');
 
+            log('🔍 saveUtmToSession called:', {
+                urlHasUtm: !!(utmSource || utmCampaign),
+                utmSource,
+                utmCampaign,
+                isInternal: isInternalNavigation(),
+                currentSession: sessionStorage.getItem(UTM_SESSION_KEY),
+                currentUtm: sessionStorage.getItem(UTM_STORAGE_KEY)
+            });
+
             // 只有当 URL 中有 UTM 参数时才保存
             if (utmSource || utmCampaign) {
                 // 完全覆盖，没有的字段就是 null
@@ -124,13 +133,15 @@
                     sessionStorage.setItem(UTM_SESSION_KEY, 'true'); // 标记此会话有 UTM
                     log('📦 UTM saved to session:', utmData);
                 } catch (e) {
-                    log('UTM save error:', e);
+                    log('❌ UTM save error:', e);
                 }
             } else if (!isInternalNavigation()) {
                 // 外部进入且没有 UTM → 清除之前的 UTM（新访问）
                 sessionStorage.removeItem(UTM_STORAGE_KEY);
                 sessionStorage.removeItem(UTM_SESSION_KEY);
                 log('🗑️ External visit without UTM, cleared session');
+            } else {
+                log('📍 Internal navigation without UTM, keeping session');
             }
         }
 
@@ -297,19 +308,22 @@
                 };
             }
 
+            // 调试：检查条件
+            const isInternal = isInternalNavigation();
+            const hasSession = hasUtmSession();
+            const savedUtm = getUtmFromSession();
+            log('🔍 UTM check:', { isInternal, hasSession, savedUtm, referrer: document.referrer });
+
             // 只有「站内跳转 + 此会话有过 UTM」时才从 sessionStorage 读取
-            if (isInternalNavigation() && hasUtmSession()) {
-                const savedUtm = getUtmFromSession();
-                if (savedUtm) {
-                    log('📂 Using UTM from session (internal navigation):', savedUtm);
-                    return {
-                        utmSource: savedUtm.utmSource || undefined,
-                        utmMedium: savedUtm.utmMedium || undefined,
-                        utmCampaign: savedUtm.utmCampaign || undefined,
-                        utmContent: savedUtm.utmContent || undefined,
-                        utmTerm: savedUtm.utmTerm || undefined,
-                    };
-                }
+            if (isInternal && hasSession && savedUtm) {
+                log('📂 Using UTM from session (internal navigation):', savedUtm);
+                return {
+                    utmSource: savedUtm.utmSource || undefined,
+                    utmMedium: savedUtm.utmMedium || undefined,
+                    utmCampaign: savedUtm.utmCampaign || undefined,
+                    utmContent: savedUtm.utmContent || undefined,
+                    utmTerm: savedUtm.utmTerm || undefined,
+                };
             }
 
             // 没有任何 UTM 参数
