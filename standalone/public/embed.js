@@ -305,41 +305,44 @@
     }
     
     .ai-welcome-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(20, 15, 10, 0.65);
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(20, 15, 10, 0.7) !important;
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        z-index: 999998;
+        z-index: 999998 !important;
         animation: ai-modal-fade-in 0.25s ease-out forwards;
     }
     
     .ai-welcome-modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
         width: 94%;
-        max-width: 680px;
+        max-width: 780px;
+        max-height: 90vh;
+        overflow-y: auto;
         background: linear-gradient(180deg, #FFFCF8 0%, #FFF9F2 100%);
-        border-radius: 24px;
-        padding: 48px 56px;
-        z-index: 999999;
+        border-radius: 20px;
+        padding: 36px 48px;
+        z-index: 999999 !important;
         box-shadow: 0 25px 60px rgba(60, 40, 20, 0.3);
         animation: ai-modal-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         color: #3D2E1F;
         text-align: center;
-        overflow: hidden;
     }
     
     .ai-welcome-image {
-        width: calc(100% + 112px);
-        height: 220px;
-        margin: -48px -56px 28px -56px;
+        width: calc(100% + 96px);
+        height: 160px;
+        margin: -36px -48px 20px -48px;
         overflow: hidden;
     }
     
@@ -347,32 +350,32 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        object-position: center 25%;
+        object-position: center 30%;
     }
     
     .ai-welcome-title {
-        font-size: 32px;
+        font-size: 26px;
         font-weight: 700;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         color: #2D2016;
         letter-spacing: -0.02em;
     }
     
     .ai-welcome-subtitle {
-        font-size: 14px;
+        font-size: 12px;
         color: #96640F;
         text-transform: uppercase;
         letter-spacing: 2px;
         font-weight: 600;
-        margin-bottom: 24px;
+        margin-bottom: 16px;
     }
     
     .ai-welcome-text {
-        font-size: 17px;
-        line-height: 1.8;
+        font-size: 15px;
+        line-height: 1.7;
         color: #5C4A3A;
-        margin-bottom: 32px;
-        max-width: 540px;
+        margin-bottom: 20px;
+        max-width: 600px;
         margin-left: auto;
         margin-right: auto;
     }
@@ -385,38 +388,37 @@
     .ai-welcome-features {
         display: flex;
         justify-content: center;
-        gap: 32px;
-        margin-bottom: 36px;
+        gap: 20px;
+        margin-bottom: 24px;
         flex-wrap: wrap;
     }
     
     .ai-welcome-feature {
         display: flex;
         align-items: center;
-        gap: 10px;
-        font-size: 14px;
+        gap: 8px;
+        font-size: 13px;
         color: #6B5344;
         background: rgba(150, 100, 15, 0.08);
-        padding: 10px 18px;
-        border-radius: 24px;
+        padding: 8px 14px;
+        border-radius: 20px;
     }
     
     .ai-welcome-feature-icon {
-        font-size: 18px;
+        font-size: 16px;
     }
     
     .ai-welcome-close {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
         background: #96640F;
         color: #FFFFFF;
         border: none;
-        padding: 16px 56px;
-        font-size: 16px;
+        padding: 14px 48px;
+        font-size: 15px;
         font-weight: 600;
-        border-radius: 12px;
+        border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s ease;
     }
@@ -433,34 +435,36 @@
     
     @media (max-width: 700px) {
         .ai-welcome-modal {
-            padding: 36px 28px;
-            max-width: 420px;
+            padding: 28px 24px;
+            max-width: 380px;
         }
         
-        .ai-welcome-decor {
-            font-size: 28px;
-            gap: 12px;
+        .ai-welcome-image {
+            width: calc(100% + 48px);
+            height: 120px;
+            margin: -28px -24px 16px -24px;
         }
         
         .ai-welcome-title {
-            font-size: 26px;
+            font-size: 22px;
         }
         
         .ai-welcome-text {
-            font-size: 15px;
+            font-size: 14px;
         }
         
         .ai-welcome-features {
-            gap: 12px;
+            gap: 10px;
         }
         
         .ai-welcome-feature {
-            padding: 8px 14px;
-            font-size: 13px;
+            padding: 6px 12px;
+            font-size: 12px;
         }
         
         .ai-welcome-close {
-            padding: 14px 44px;
+            padding: 12px 36px;
+            font-size: 14px;
         }
     }
 `;
