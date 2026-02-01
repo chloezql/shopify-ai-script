@@ -25,6 +25,48 @@ app.route('/api/generate', generateRouter);
 // Static files (demo page, embed.js)
 app.use('/public/*', serveStatic({ root: './' }));
 
+// embed.js - 无缓存，方便更新后立刻生效
+app.get('/embed.js', async (c) => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'embed.js');
+    const content = await fs.readFile(filePath, 'utf-8');
+
+    return c.text(content, 200, {
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
+  } catch (error) {
+    console.error('Failed to read embed.js:', error);
+    return c.text('// embed.js not found', 404);
+  }
+});
+
+// theme-snippet.html - 同样无缓存
+app.get('/theme-snippet.html', async (c) => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'theme-snippet.html');
+    const content = await fs.readFile(filePath, 'utf-8');
+
+    return c.text(content, 200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
+  } catch (error) {
+    console.error('Failed to read theme-snippet.html:', error);
+    return c.text('<!-- theme-snippet.html not found -->', 404);
+  }
+});
+
 // Shortcut: /demo -> /public/demo.html
 app.get('/demo', (c) => c.redirect('/public/demo.html'));
 
