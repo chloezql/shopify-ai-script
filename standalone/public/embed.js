@@ -299,15 +299,20 @@
         }
     }
     
+    @keyframes ai-paw-float {
+        0%, 100% { transform: translateY(0) rotate(-5deg); }
+        50% { transform: translateY(-8px) rotate(5deg); }
+    }
+    
     .ai-welcome-overlay {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(30, 20, 15, 0.5);
-        backdrop-filter: blur(3px);
-        -webkit-backdrop-filter: blur(3px);
+        background: rgba(20, 15, 10, 0.65);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         z-index: 999998;
         animation: ai-modal-fade-in 0.25s ease-out forwards;
     }
@@ -317,32 +322,59 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 92%;
-        max-width: 520px;
-        background: #FFFBF7;
-        border-radius: 16px;
-        padding: 40px 48px;
+        width: 94%;
+        max-width: 680px;
+        background: linear-gradient(180deg, #FFFCF8 0%, #FFF9F2 100%);
+        border-radius: 24px;
+        padding: 48px 56px;
         z-index: 999999;
-        box-shadow: 0 20px 50px rgba(60, 40, 20, 0.25);
+        box-shadow: 0 25px 60px rgba(60, 40, 20, 0.3);
         animation: ai-modal-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         color: #3D2E1F;
         text-align: center;
+        overflow: hidden;
+    }
+    
+    .ai-welcome-image {
+        width: calc(100% + 112px);
+        height: 220px;
+        margin: -48px -56px 28px -56px;
+        overflow: hidden;
+    }
+    
+    .ai-welcome-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 25%;
     }
     
     .ai-welcome-title {
-        font-size: 26px;
-        font-weight: 600;
-        margin-bottom: 20px;
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 16px;
         color: #2D2016;
         letter-spacing: -0.02em;
     }
     
+    .ai-welcome-subtitle {
+        font-size: 14px;
+        color: #96640F;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 600;
+        margin-bottom: 24px;
+    }
+    
     .ai-welcome-text {
-        font-size: 16px;
-        line-height: 1.75;
+        font-size: 17px;
+        line-height: 1.8;
         color: #5C4A3A;
         margin-bottom: 32px;
+        max-width: 540px;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .ai-welcome-text strong {
@@ -350,47 +382,85 @@
         font-weight: 600;
     }
     
+    .ai-welcome-features {
+        display: flex;
+        justify-content: center;
+        gap: 32px;
+        margin-bottom: 36px;
+        flex-wrap: wrap;
+    }
+    
+    .ai-welcome-feature {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: #6B5344;
+        background: rgba(150, 100, 15, 0.08);
+        padding: 10px 18px;
+        border-radius: 24px;
+    }
+    
+    .ai-welcome-feature-icon {
+        font-size: 18px;
+    }
+    
     .ai-welcome-close {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        gap: 10px;
         background: #96640F;
         color: #FFFFFF;
         border: none;
-        padding: 14px 48px;
-        font-size: 15px;
-        font-weight: 500;
-        border-radius: 8px;
+        padding: 16px 56px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.2s ease;
     }
     
     .ai-welcome-close:hover {
         background: #7D5410;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(150, 100, 15, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(150, 100, 15, 0.35);
     }
     
     .ai-welcome-close:active {
         transform: translateY(0);
     }
     
-    @media (max-width: 540px) {
+    @media (max-width: 700px) {
         .ai-welcome-modal {
-            padding: 32px 28px;
-            max-width: 360px;
+            padding: 36px 28px;
+            max-width: 420px;
+        }
+        
+        .ai-welcome-decor {
+            font-size: 28px;
+            gap: 12px;
         }
         
         .ai-welcome-title {
-            font-size: 22px;
+            font-size: 26px;
         }
         
         .ai-welcome-text {
             font-size: 15px;
         }
         
+        .ai-welcome-features {
+            gap: 12px;
+        }
+        
+        .ai-welcome-feature {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+        
         .ai-welcome-close {
-            padding: 12px 40px;
+            padding: 14px 44px;
         }
     }
 `;
@@ -429,15 +499,35 @@
         const modalHTML = `
             <div class="ai-welcome-overlay" id="ai-welcome-overlay"></div>
             <div class="ai-welcome-modal" id="ai-welcome-modal">
+                <div class="ai-welcome-image">
+                    <img src="https://shopify-ai-script-production.up.railway.app/KWFfp1g77kxJMSnHD87aX_WNRvdBZc.png" alt="Happy pets">
+                </div>
+                <div class="ai-welcome-subtitle">Personalized Pet Experience</div>
                 <h2 class="ai-welcome-title">${titleText}</h2>
                 <p class="ai-welcome-text">
-                    This store features <strong>dynamic product shots</strong> generated in real-time, 
-                    personalized to match current trends and the moment you're shopping.
+                    We're excited to show you something special! Our store uses <strong>AI-powered dynamic product imagery</strong> 
+                    to create a unique shopping experience tailored just for you and your furry friends.
                     <br><br>
-                    Images may take a few moments to generate — enjoy the experience!
+                    Every product photo you see is <strong>generated in real-time</strong>, matching current trends, 
+                    seasonal vibes, and your browsing context. Images may take a few moments to appear — 
+                    it's worth the wait!
                 </p>
+                <div class="ai-welcome-features">
+                    <div class="ai-welcome-feature">
+                        <span class="ai-welcome-feature-icon">✨</span>
+                        <span>AI-Generated</span>
+                    </div>
+                    <div class="ai-welcome-feature">
+                        <span class="ai-welcome-feature-icon">🎯</span>
+                        <span>Personalized</span>
+                    </div>
+                    <div class="ai-welcome-feature">
+                        <span class="ai-welcome-feature-icon">🐾</span>
+                        <span>Pet-Focused</span>
+                    </div>
+                </div>
                 <button class="ai-welcome-close" id="ai-welcome-close">
-                    Got It
+                    Start Shopping
                 </button>
             </div>
         `;

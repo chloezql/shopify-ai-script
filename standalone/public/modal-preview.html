@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Visual Welcome Modal - Pet Theme Preview</title>
+    <style>
+        /* 模拟宠物店铺背景 */
+        body {
+            margin: 0;
+            padding: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #FAF7F2;
+            min-height: 100vh;
+        }
+
+        .preview-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(60, 40, 20, 0.1);
+            z-index: 1000000;
+            border: 1px solid #E8E0D5;
+        }
+
+        .preview-controls h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            color: #5C4A3A;
+        }
+
+        .preview-btn {
+            background: #96640F;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .preview-btn:hover {
+            background: #7D5410;
+        }
+
+        /* 模拟宠物产品卡片 */
+        .fake-products {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 24px;
+            max-width: 1100px;
+            margin: 80px auto 0;
+        }
+
+        .fake-product {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(60, 40, 20, 0.08);
+            border: 1px solid #E8E0D5;
+        }
+
+        .fake-product-img {
+            height: 240px;
+            background: linear-gradient(135deg, #F5EDE3 0%, #EDE5DA 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #BE573E;
+            font-size: 56px;
+        }
+
+        .fake-product-info {
+            padding: 18px;
+        }
+
+        .fake-product-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #3D2E1F;
+            margin-bottom: 6px;
+        }
+
+        .fake-product-price {
+            font-size: 17px;
+            font-weight: 600;
+            color: #96640F;
+        }
+
+        /* ===================== */
+        /* Welcome Modal - Pet Theme */
+        /* ===================== */
+
+        @keyframes ai-modal-fade-in {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes ai-modal-slide-up {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        @keyframes ai-paw-float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(-5deg);
+            }
+
+            50% {
+                transform: translateY(-8px) rotate(5deg);
+            }
+        }
+
+        .ai-welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(20, 15, 10, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 999998;
+            animation: ai-modal-fade-in 0.25s ease-out forwards;
+        }
+
+        .ai-welcome-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 94%;
+            max-width: 680px;
+            background: linear-gradient(180deg, #FFFCF8 0%, #FFF9F2 100%);
+            border-radius: 24px;
+            padding: 48px 56px;
+            z-index: 999999;
+            box-shadow: 0 25px 60px rgba(60, 40, 20, 0.3);
+            animation: ai-modal-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #3D2E1F;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .ai-welcome-image {
+            width: calc(100% + 112px);
+            height: 220px;
+            margin: -48px -56px 28px -56px;
+            overflow: hidden;
+        }
+
+        .ai-welcome-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 25%;
+        }
+
+        .ai-welcome-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #2D2016;
+            letter-spacing: -0.02em;
+        }
+
+        .ai-welcome-subtitle {
+            font-size: 14px;
+            color: #96640F;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .ai-welcome-text {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #5C4A3A;
+            margin-bottom: 32px;
+            max-width: 540px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .ai-welcome-text strong {
+            color: #96640F;
+            font-weight: 600;
+        }
+
+        .ai-welcome-features {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 36px;
+            flex-wrap: wrap;
+        }
+
+        .ai-welcome-feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #6B5344;
+            background: rgba(150, 100, 15, 0.08);
+            padding: 10px 18px;
+            border-radius: 24px;
+        }
+
+        .ai-welcome-feature-icon {
+            font-size: 18px;
+        }
+
+        .ai-welcome-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #96640F;
+            color: #FFFFFF;
+            border: none;
+            padding: 16px 56px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ai-welcome-close:hover {
+            background: #7D5410;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(150, 100, 15, 0.35);
+        }
+
+        .ai-welcome-close:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 700px) {
+            .ai-welcome-modal {
+                padding: 36px 28px;
+                max-width: 420px;
+            }
+
+            .ai-welcome-decor {
+                font-size: 28px;
+                gap: 12px;
+            }
+
+            .ai-welcome-title {
+                font-size: 26px;
+            }
+
+            .ai-welcome-text {
+                font-size: 15px;
+            }
+
+            .ai-welcome-features {
+                gap: 12px;
+            }
+
+            .ai-welcome-feature {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+
+            .ai-welcome-close {
+                padding: 14px 44px;
+            }
+        }
+
+        .ai-welcome-overlay.hidden,
+        .ai-welcome-modal.hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 预览控制面板 -->
+    <div class="preview-controls">
+        <h3>🐾 Pet Modal Preview</h3>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Traffic Source:</label>
+            <select id="source-select"
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Google">Google</option>
+                <option value="">No source (fallback)</option>
+            </select>
+        </div>
+        <button class="preview-btn" onclick="showModal()">Show Modal</button>
+    </div>
+
+    <!-- 模拟宠物产品列表 -->
+    <div class="fake-products">
+        <div class="fake-product">
+            <div class="fake-product-img">🐕</div>
+            <div class="fake-product-info">
+                <div class="fake-product-title">Premium Dog Food</div>
+                <div class="fake-product-price">$45.99</div>
+            </div>
+        </div>
+        <div class="fake-product">
+            <div class="fake-product-img">🐈</div>
+            <div class="fake-product-info">
+                <div class="fake-product-title">Cozy Cat Bed</div>
+                <div class="fake-product-price">$68.00</div>
+            </div>
+        </div>
+        <div class="fake-product">
+            <div class="fake-product-img">🦴</div>
+            <div class="fake-product-info">
+                <div class="fake-product-title">Chew Toy Bundle</div>
+                <div class="fake-product-price">$24.99</div>
+            </div>
+        </div>
+        <div class="fake-product">
+            <div class="fake-product-img">🐾</div>
+            <div class="fake-product-info">
+                <div class="fake-product-title">Pet Grooming Kit</div>
+                <div class="fake-product-price">$52.00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 容器 -->
+    <div id="ai-welcome-container"></div>
+
+    <script>
+        function showModal() {
+            const sourceText = document.getElementById('source-select').value;
+            const titleText = sourceText
+                ? `Welcome from ${sourceText}!`
+                : 'A Personalized Experience Awaits';
+
+            const modalHTML = `
+                <div class="ai-welcome-overlay" id="ai-welcome-overlay"></div>
+                <div class="ai-welcome-modal" id="ai-welcome-modal">
+                    <div class="ai-welcome-image">
+                        <img src="./KWFfp1g77kxJMSnHD87aX_WNRvdBZc.png" alt="Happy pets">
+                    </div>
+                    <div class="ai-welcome-subtitle">Personalized Pet Experience</div>
+                    <h2 class="ai-welcome-title">${titleText}</h2>
+                    <p class="ai-welcome-text">
+                        We're excited to show you something special! Our store uses <strong>AI-powered dynamic product imagery</strong> 
+                        to create a unique shopping experience tailored just for you and your furry friends.
+                        <br><br>
+                        Every product photo you see is <strong>generated in real-time</strong>, matching current trends, 
+                        seasonal vibes, and your browsing context. Images may take a few moments to appear — 
+                        it's worth the wait!
+                    </p>
+                    <div class="ai-welcome-features">
+                        <div class="ai-welcome-feature">
+                            <span class="ai-welcome-feature-icon">✨</span>
+                            <span>AI-Generated</span>
+                        </div>
+                        <div class="ai-welcome-feature">
+                            <span class="ai-welcome-feature-icon">🎯</span>
+                            <span>Personalized</span>
+                        </div>
+                        <div class="ai-welcome-feature">
+                            <span class="ai-welcome-feature-icon">🐾</span>
+                            <span>Pet-Focused</span>
+                        </div>
+                    </div>
+                    <button class="ai-welcome-close" id="ai-welcome-close">
+                        Start Shopping
+                    </button>
+                </div>
+            `;
+
+            const container = document.getElementById('ai-welcome-container');
+            container.innerHTML = modalHTML;
+
+            const closeModal = () => {
+                const overlay = document.getElementById('ai-welcome-overlay');
+                const modal = document.getElementById('ai-welcome-modal');
+
+                if (overlay) {
+                    overlay.style.transition = 'opacity 0.25s ease';
+                    overlay.style.opacity = '0';
+                }
+                if (modal) {
+                    modal.style.transition = 'all 0.25s ease';
+                    modal.style.opacity = '0';
+                    modal.style.transform = 'translate(-50%, -48%)';
+                }
+
+                setTimeout(() => {
+                    container.innerHTML = '';
+                }, 250);
+            };
+
+            document.getElementById('ai-welcome-close')?.addEventListener('click', closeModal);
+            document.getElementById('ai-welcome-overlay')?.addEventListener('click', closeModal);
+
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+        }
+
+        // 页面加载时自动显示
+        window.onload = () => {
+            setTimeout(showModal, 300);
+        };
+    </script>
+</body>
+
+</html>
