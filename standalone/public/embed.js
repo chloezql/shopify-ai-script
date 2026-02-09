@@ -1554,80 +1554,241 @@
      * 规则从上到下 first-match。
      * match.contentKeywords  → 与 UTM campaign/content 提取的关键词做匹配
      * match.trafficSource    → 与归类后的流量平台做匹配
-     * action.relevantTags    → null 表示不过滤，数组表示白名单（只显示匹配的产品）
-     * action.boostTags       → 匹配的产品排在前面
-     * action.relevantKeywords→ 当产品无 tag 时，用 handle/title 做关键词兜底匹配
+     *
+     * action.relevantTags    → null=不过滤，数组=白名单过滤
+     * action.relevantKeywords→ 当产品无 tag 时用 handle/title 做兜底匹配
+     * action.sectionOrder    → 'products_first' = 产品区移到 Hero 前面
+     *
+     * ★ 排序不在规则里定义，而是动态使用 context.contentIntent
+     *   例如 utm_campaign=dog-toy-sale → contentIntent=['dog','toy']
+     *   有 'dog'+'toy' 标签的产品排最前，只有 'dog' 的其次
      */
     const PERSONALIZATION_RULES = [
-        // 内容关键词匹配（优先级最高：UTM 里包含动物类型）
+        // 内容关键词匹配（最高优先级：UTM 里含动物类型）
         {
             id: 'dog_content',
-            name: 'Dog ads → dog products',
             match: { contentKeywords: ['dog', 'puppy', 'canine', 'pup'] },
             action: {
                 relevantTags: ['dog'],
-                boostTags: ['dog'],
                 relevantKeywords: ['dog', 'puppy', 'pup'],
             },
         },
         {
             id: 'cat_content',
-            name: 'Cat ads → cat products',
             match: { contentKeywords: ['cat', 'kitten', 'feline', 'kitty'] },
             action: {
                 relevantTags: ['cat'],
-                boostTags: ['cat'],
                 relevantKeywords: ['cat', 'kitten', 'kitty', 'mouse', 'mousey', 'birdy', 'fish'],
             },
         },
-        // 平台级匹配（无内容过滤，仅排序偏好）
+        // 平台级匹配（无产品过滤，仅做 section 级调整）
         {
-            id: 'tiktok_trending',
-            name: 'TikTok → trending first',
+            id: 'tiktok_traffic',
             match: { trafficSource: ['tiktok'] },
             action: {
                 relevantTags: null,
-                boostTags: ['trending', 'new-arrival', 'viral'],
                 relevantKeywords: null,
+                sectionOrder: 'products_first', // TikTok 用户直接看产品
             },
         },
         {
-            id: 'instagram_lifestyle',
-            name: 'Instagram → lifestyle first',
+            id: 'instagram_traffic',
             match: { trafficSource: ['instagram'] },
-            action: {
-                relevantTags: null,
-                boostTags: ['lifestyle', 'bestseller', 'aesthetic'],
-                relevantKeywords: null,
-            },
+            action: { relevantTags: null, relevantKeywords: null },
         },
         {
-            id: 'google_intent',
-            name: 'Google → bestseller first',
+            id: 'google_traffic',
             match: { trafficSource: ['google'] },
-            action: {
-                relevantTags: null,
-                boostTags: ['bestseller', 'top-rated', 'popular'],
-                relevantKeywords: null,
-            },
+            action: { relevantTags: null, relevantKeywords: null },
         },
         {
-            id: 'facebook_social',
-            name: 'Facebook → popular first',
+            id: 'facebook_traffic',
             match: { trafficSource: ['facebook'] },
-            action: {
-                relevantTags: null,
-                boostTags: ['bestseller', 'gift', 'popular'],
-                relevantKeywords: null,
-            },
+            action: { relevantTags: null, relevantKeywords: null },
         },
     ];
 
     const DEFAULT_LP_ACTION = {
         relevantTags: null,
-        boostTags: [],
         relevantKeywords: null,
     };
+
+    // --- 文案个性化配置 ---
+
+    /**
+     * 按 ruleId 映射文案替换。
+     * 每个 selector 会在 <main> 内对应的 section 中查找元素并替换文案。
+     * 支持 data-ai-original-text 保存原始文案，用于缓存恢复。
+     */
+    const TEXT_PERSONALIZATION = {
+        dog_content: [
+            {
+                // Featured products 标题
+                sectionMatch: 'featured',
+                selector: 'h2, .title, .collection__title',
+                text: 'Best Picks for Your Dog 🐕',
+            },
+            {
+                // Image-with-text 标题
+                sectionMatch: 'image_with_text',
+                selector: 'h2, .image-with-text__heading',
+                text: 'Keep Your Pup Happy',
+            },
+            {
+                // Image-with-text 正文
+                sectionMatch: 'image_with_text',
+                selector: '.image-with-text__text p, .rte p, p',
+                text: 'Try our toy subscription so you can keep your furry friend happy and surprised!',
+            },
+            {
+                // Hero banner 标题
+                sectionMatch: 'image_banner,slideshow,hero',
+                selector: 'h2, .banner__heading, .slideshow__heading',
+                text: 'Pawsome Style for Your Pup!',
+            },
+        ],
+        cat_content: [
+            {
+                sectionMatch: 'featured',
+                selector: 'h2, .title, .collection__title',
+                text: 'Purrfect Picks for Your Cat 🐱',
+            },
+            {
+                sectionMatch: 'image_with_text',
+                selector: 'h2, .image-with-text__heading',
+                text: 'Keep Your Cat Happy',
+            },
+            {
+                sectionMatch: 'image_with_text',
+                selector: '.image-with-text__text p, .rte p, p',
+                text: 'Try our toy subscription so you can keep your feline friend happy and surprised!',
+            },
+            {
+                sectionMatch: 'image_banner,slideshow,hero',
+                selector: 'h2, .banner__heading, .slideshow__heading',
+                text: 'Purrfect Style for Your Cat!',
+            },
+        ],
+    };
+
+    // --- Section 重排序 ---
+
+    /**
+     * 根据规则重新排列页面 section 的顺序。
+     * 目前支持：TikTok → products_first（产品区移到 Hero Banner 前面）
+     */
+    function reorderSections(action, context) {
+        try {
+            var shouldProductsFirst = (action && action.sectionOrder === 'products_first') ||
+                                     context.trafficSource === 'tiktok';
+            if (!shouldProductsFirst) return;
+
+            var main = document.querySelector('#MainContent, main, [role="main"]');
+            if (!main) return;
+
+            var sections = Array.from(main.querySelectorAll(':scope > .shopify-section, :scope > section'));
+            if (sections.length < 2) return;
+
+            var heroSection = null;
+            var productsSection = null;
+
+            sections.forEach(function (section) {
+                var id = (section.id || '').toLowerCase();
+                if (!heroSection && (id.includes('image_banner') || id.includes('slideshow') || id.includes('hero'))) {
+                    heroSection = section;
+                }
+                if (!productsSection && (id.includes('featured') || (id.includes('collection') && !id.includes('collection_list')))) {
+                    productsSection = section;
+                }
+            });
+
+            if (heroSection && productsSection) {
+                // 只在产品区当前在 Hero 后面时才移动
+                if (heroSection.compareDocumentPosition(productsSection) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                    heroSection.parentElement.insertBefore(productsSection, heroSection);
+                    log('[AI-LP] ✅ Section reorder: products moved before hero (TikTok)');
+                }
+            }
+        } catch (err) {
+            log('[AI-LP] Section reorder error (graceful):', err);
+        }
+    }
+
+    // --- 文案个性化执行 ---
+
+    /**
+     * 根据 ruleId 查找匹配的 section 并替换文案。
+     * 保存原始文案到 data-ai-original-text，用于缓存恢复时先还原再重设。
+     */
+    function applyTextPersonalization(ruleId) {
+        try {
+            var rules = TEXT_PERSONALIZATION[ruleId];
+            if (!rules || rules.length === 0) return;
+
+            var main = document.querySelector('#MainContent, main, [role="main"]');
+            if (!main) return;
+
+            var sections = Array.from(main.querySelectorAll('.shopify-section, section'));
+
+            rules.forEach(function (rule) {
+                var matchPatterns = rule.sectionMatch.split(',');
+                var targetSection = null;
+
+                // 找到匹配的 section
+                for (var i = 0; i < sections.length; i++) {
+                    var sectionId = (sections[i].id || '').toLowerCase();
+                    var matched = matchPatterns.some(function (pattern) {
+                        return sectionId.includes(pattern.trim());
+                    });
+                    if (matched) {
+                        targetSection = sections[i];
+                        break;
+                    }
+                }
+
+                if (!targetSection) return;
+
+                // 在该 section 内找到目标元素
+                var el = targetSection.querySelector(rule.selector);
+                if (!el) return;
+
+                // 保存原始文案（只保存一次）
+                if (!el.dataset.aiOriginalText) {
+                    el.dataset.aiOriginalText = el.textContent;
+                }
+
+                el.textContent = rule.text;
+                log('[AI-LP] Text: "' + el.dataset.aiOriginalText.slice(0, 30) + '..." → "' + rule.text + '"');
+            });
+        } catch (err) {
+            log('[AI-LP] Text personalization error (graceful):', err);
+        }
+    }
+
+    /**
+     * 还原所有被个性化修改过的文案
+     */
+    function restoreOriginalTexts() {
+        try {
+            var elements = document.querySelectorAll('[data-ai-original-text]');
+            elements.forEach(function (el) {
+                el.textContent = el.dataset.aiOriginalText;
+                el.removeAttribute('data-ai-original-text');
+            });
+        } catch (err) {
+            // ignore
+        }
+    }
+
+    /**
+     * 根据 ruleId 查找规则的 action（用于缓存恢复时获取 sectionOrder 等配置）
+     */
+    function getActionForRule(ruleId) {
+        for (var i = 0; i < PERSONALIZATION_RULES.length; i++) {
+            if (PERSONALIZATION_RULES[i].id === ruleId) return PERSONALIZATION_RULES[i].action;
+        }
+        return DEFAULT_LP_ACTION;
+    }
 
     // --- 上下文构建 ---
 
@@ -2031,6 +2192,12 @@
                     return;
                 }
                 restoreFromCache(cards, cached);
+                // 恢复 Section 排序和文案（从规则配置重新执行）
+                var cachedAction = getActionForRule(cached.ruleId);
+                var cachedContext = buildLayoutContext();
+                reorderSections(cachedAction, cachedContext);
+                restoreOriginalTexts(); // 先还原再重设，避免叠加
+                applyTextPersonalization(cached.ruleId);
                 container.setAttribute('data-ai-lp-applied', cached.ruleId);
                 return;
             }
@@ -2066,18 +2233,27 @@
                 }
             }
 
-            // 过滤
+            // === Step 1: 产品过滤 ===
             var filterResult = filterByRelevance(cards, productMeta, action);
             var visibleCards = filterResult.visibleCards;
             var hiddenHandles = filterResult.hiddenHandles;
 
-            // 排序（只对可见卡片排序）
-            reorderByRelevance(visibleCards, productMeta, action);
+            // === Step 1b: 产品排序（campaign 关键词驱动，而非平台绑定） ===
+            // 用 contentIntent 作为 boostTags：utm_campaign=dog-toy → boost ['dog','toy']
+            // 有更多匹配标签的产品排更前面
+            var campaignBoostAction = { boostTags: context.contentIntent || [] };
+            reorderByRelevance(visibleCards, productMeta, campaignBoostAction);
 
             // 收集排序后的顺序
             var orderedHandles = visibleCards.map(function (c) {
                 return getProductHandleFromCard(c);
             }).filter(Boolean);
+
+            // === Step 2: Section 重排序 ===
+            reorderSections(action, context);
+
+            // === Step 3: 文案个性化 ===
+            applyTextPersonalization(ruleId);
 
             // 标记 + 缓存
             container.setAttribute('data-ai-lp-applied', ruleId);
