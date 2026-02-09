@@ -2017,8 +2017,17 @@
         var sections = main.querySelectorAll('.shopify-section, section');
         for (var i = 0; i < sections.length; i++) {
             var id = (sections[i].id || '').toLowerCase();
+            // 也检查 section 内部的 class 和内容
+            var inner = sections[i].innerHTML.substring(0, 500).toLowerCase();
             for (var j = 0; j < patterns.length; j++) {
-                if (id.includes(patterns[j])) return sections[i];
+                var p = patterns[j];
+                if (id.includes(p)) return sections[i];
+                // 兜底：检查 section 内部是否有匹配 class 的元素
+                if (p === 'image_with_text' && (inner.includes('image-with-text') || sections[i].querySelector('.image-with-text'))) return sections[i];
+                if (p === 'featured' && (inner.includes('featured') || sections[i].querySelector('[class*="collection"]'))) {
+                    // 排除 collection_list
+                    if (!id.includes('collection_list')) return sections[i];
+                }
             }
         }
         return null;
@@ -2119,7 +2128,10 @@
     function setTextSafe(section, selector, text) {
         if (!section || !text) return;
         var el = section.querySelector(selector);
-        if (!el) return;
+        if (!el) {
+            log('[AI-LP] Text: selector "' + selector + '" NOT FOUND in section', section.id || section.className);
+            return;
+        }
 
         // 查找最内层的文本承载元素（h1, h2, h3, p, span 等），避免替换 wrapper div
         var innerEl = el;
@@ -2149,6 +2161,10 @@
             ];
             rules.forEach(function (rule) {
                 var section = findSectionByPattern(rule.patterns);
+                if (!section) {
+                    log('[AI-LP] Text: section NOT FOUND for patterns', rule.patterns.join(','));
+                    return;
+                }
                 setTextSafe(section, rule.selector, rule.text);
             });
         } catch (err) { log('[AI-LP] Text error:', err); }
