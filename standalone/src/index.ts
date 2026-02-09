@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { generateRouter } from './routes/generate.js';
+import { personalizeRouter } from './routes/personalize.js';
 
 const app = new Hono();
 
@@ -21,6 +22,7 @@ app.use('*', cors({
 
 // Routes
 app.route('/api/generate', generateRouter);
+app.route('/api/personalize', personalizeRouter);
 
 // Static files (demo page, embed.js)
 app.use('/public/*', serveStatic({ root: './' }));
@@ -77,6 +79,7 @@ app.get('/', (c) => {
     version: '1.0.0',
     endpoints: {
       generate: 'POST /api/generate',
+      personalize: 'POST /api/personalize',
       health: 'GET /api/generate/health',
     },
   });

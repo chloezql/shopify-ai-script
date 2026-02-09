@@ -530,6 +530,109 @@
     .ai-lp-hidden {
         display: none !important;
     }
+    
+    /* Grid 2-column layout override */
+    .ai-lp-grid-2col {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    @media (max-width: 749px) {
+        .ai-lp-grid-2col {
+            grid-template-columns: repeat(1, 1fr) !important;
+        }
+    }
+    
+    /* Image-with-text flip */
+    .ai-lp-iwt-flip .image-with-text,
+    .ai-lp-iwt-flip .image-with-text__grid,
+    .ai-lp-iwt-flip > .grid,
+    .ai-lp-iwt-flip > div > .grid {
+        direction: rtl;
+    }
+    .ai-lp-iwt-flip .image-with-text > *,
+    .ai-lp-iwt-flip .image-with-text__grid > *,
+    .ai-lp-iwt-flip > .grid > *,
+    .ai-lp-iwt-flip > div > .grid > * {
+        direction: ltr;
+    }
+    
+    /* Vibe Bar */
+    .ai-lp-vibe-bar {
+        width: 100%;
+        padding: 14px 24px;
+        background: linear-gradient(135deg, #FFF8F0 0%, #FFF3E6 50%, #FFF0DB 100%);
+        border-bottom: 1px solid rgba(150, 100, 15, 0.12);
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-sizing: border-box;
+    }
+    
+    .ai-lp-vibe-bar__icon {
+        font-size: 22px;
+        line-height: 1;
+    }
+    
+    .ai-lp-vibe-bar__text {
+        font-size: 15px;
+        font-weight: 600;
+        color: #5C3D0E;
+        letter-spacing: 0.02em;
+    }
+    
+    /* Trust Block */
+    .ai-lp-trust-block {
+        width: 100%;
+        padding: 32px 24px;
+        background: #FAFAF8;
+        border-top: 1px solid #F0EDE8;
+        border-bottom: 1px solid #F0EDE8;
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        flex-wrap: wrap;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        box-sizing: border-box;
+    }
+    
+    .ai-lp-trust-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        min-width: 120px;
+    }
+    
+    .ai-lp-trust-item__icon {
+        font-size: 28px;
+        line-height: 1;
+    }
+    
+    .ai-lp-trust-item__text {
+        font-size: 13px;
+        font-weight: 600;
+        color: #5C4A3A;
+        text-align: center;
+    }
+    
+    @media (max-width: 749px) {
+        .ai-lp-trust-block {
+            gap: 24px;
+            padding: 24px 16px;
+        }
+        .ai-lp-trust-item__icon {
+            font-size: 24px;
+        }
+        .ai-lp-trust-item__text {
+            font-size: 12px;
+        }
+        .ai-lp-vibe-bar__text {
+            font-size: 13px;
+        }
+    }
 `;
     document.head.appendChild(style);
 
@@ -1542,285 +1645,94 @@
     }
 
     // =====================
-    // Landing Page 个性化引擎
+    // Landing Page 个性化引擎 (LLM-Driven)
     // =====================
 
     const LP_CACHE_KEY = 'ai_lp_layout_state';
     const LP_CACHE_TTL = 30 * 60 * 1000; // 30 分钟
+    const LP_PERSONALIZATION_KEY = 'ai_lp_personalization'; // LLM 结果缓存
 
-    // --- 个性化规则配置 ---
+    // --- LLM 个性化预加载 ---
 
-    /**
-     * 规则从上到下 first-match。
-     * match.contentKeywords  → 与 UTM campaign/content 提取的关键词做匹配
-     * match.trafficSource    → 与归类后的流量平台做匹配
-     *
-     * action.relevantTags    → null=不过滤，数组=白名单过滤
-     * action.relevantKeywords→ 当产品无 tag 时用 handle/title 做兜底匹配
-     * action.sectionOrder    → 'products_first' = 产品区移到 Hero 前面
-     *
-     * ★ 排序不在规则里定义，而是动态使用 context.contentIntent
-     *   例如 utm_campaign=dog-toy-sale → contentIntent=['dog','toy']
-     *   有 'dog'+'toy' 标签的产品排最前，只有 'dog' 的其次
-     */
-    const PERSONALIZATION_RULES = [
-        // 内容关键词匹配（最高优先级：UTM 里含动物类型）
-        {
-            id: 'dog_content',
-            match: { contentKeywords: ['dog', 'puppy', 'canine', 'pup'] },
-            action: {
-                relevantTags: ['dog'],
-                relevantKeywords: ['dog', 'puppy', 'pup'],
-            },
-        },
-        {
-            id: 'cat_content',
-            match: { contentKeywords: ['cat', 'kitten', 'feline', 'kitty'] },
-            action: {
-                relevantTags: ['cat'],
-                relevantKeywords: ['cat', 'kitten', 'kitty', 'mouse', 'mousey', 'birdy', 'fish'],
-            },
-        },
-        // 平台级匹配（无产品过滤，仅做 section 级调整）
-        {
-            id: 'tiktok_traffic',
-            match: { trafficSource: ['tiktok'] },
-            action: {
-                relevantTags: null,
-                relevantKeywords: null,
-                sectionOrder: 'products_first', // TikTok 用户直接看产品
-            },
-        },
-        {
-            id: 'instagram_traffic',
-            match: { trafficSource: ['instagram'] },
-            action: { relevantTags: null, relevantKeywords: null },
-        },
-        {
-            id: 'google_traffic',
-            match: { trafficSource: ['google'] },
-            action: { relevantTags: null, relevantKeywords: null },
-        },
-        {
-            id: 'facebook_traffic',
-            match: { trafficSource: ['facebook'] },
-            action: { relevantTags: null, relevantKeywords: null },
-        },
-    ];
-
-    const DEFAULT_LP_ACTION = {
-        relevantTags: null,
-        relevantKeywords: null,
-    };
-
-    // --- 文案个性化配置 ---
+    let _personalizationPromise = null;
+    let _personalizationCache = null;
 
     /**
-     * 按 ruleId 映射文案替换。
-     * 每个 selector 会在 <main> 内对应的 section 中查找元素并替换文案。
-     * 支持 data-ai-original-text 保存原始文案，用于缓存恢复。
+     * 预加载 LLM 个性化决策
+     * 在脚本加载时立即发起，与 products.json 并行
      */
-    const TEXT_PERSONALIZATION = {
-        dog_content: [
-            {
-                // Featured products 标题
-                sectionMatch: 'featured',
-                selector: 'h2, .title, .collection__title',
-                text: 'Best Picks for Your Dog 🐕',
-            },
-            {
-                // Image-with-text 标题
-                sectionMatch: 'image_with_text',
-                selector: 'h2, .image-with-text__heading',
-                text: 'Keep Your Pup Happy',
-            },
-            {
-                // Image-with-text 正文
-                sectionMatch: 'image_with_text',
-                selector: '.image-with-text__text p, .rte p, p',
-                text: 'Try our toy subscription so you can keep your furry friend happy and surprised!',
-            },
-            {
-                // Hero banner 标题
-                sectionMatch: 'image_banner,slideshow,hero',
-                selector: 'h2, .banner__heading, .slideshow__heading',
-                text: 'Pawsome Style for Your Pup!',
-            },
-        ],
-        cat_content: [
-            {
-                sectionMatch: 'featured',
-                selector: 'h2, .title, .collection__title',
-                text: 'Purrfect Picks for Your Cat 🐱',
-            },
-            {
-                sectionMatch: 'image_with_text',
-                selector: 'h2, .image-with-text__heading',
-                text: 'Keep Your Cat Happy',
-            },
-            {
-                sectionMatch: 'image_with_text',
-                selector: '.image-with-text__text p, .rte p, p',
-                text: 'Try our toy subscription so you can keep your feline friend happy and surprised!',
-            },
-            {
-                sectionMatch: 'image_banner,slideshow,hero',
-                selector: 'h2, .banner__heading, .slideshow__heading',
-                text: 'Purrfect Style for Your Cat!',
-            },
-        ],
-    };
+    function preloadPersonalization() {
+        var utm = getUtmParams();
+        if (!utm.utmSource && !utm.utmCampaign && !utm.utmContent) {
+            return Promise.resolve(null);
+        }
 
-    // --- Section 重排序 ---
-
-    /**
-     * 根据规则重新排列页面 section 的顺序。
-     * 目前支持：TikTok → products_first（产品区移到 Hero Banner 前面）
-     */
-    function reorderSections(action, context) {
+        // 先检查 sessionStorage（SPA 导航缓存）
+        var fingerprint = getUtmFingerprint();
         try {
-            var shouldProductsFirst = (action && action.sectionOrder === 'products_first') ||
-                                     context.trafficSource === 'tiktok';
-            if (!shouldProductsFirst) return;
-
-            var main = document.querySelector('#MainContent, main, [role="main"]');
-            if (!main) return;
-
-            var sections = Array.from(main.querySelectorAll(':scope > .shopify-section, :scope > section'));
-            if (sections.length < 2) return;
-
-            var heroSection = null;
-            var productsSection = null;
-
-            sections.forEach(function (section) {
-                var id = (section.id || '').toLowerCase();
-                if (!heroSection && (id.includes('image_banner') || id.includes('slideshow') || id.includes('hero'))) {
-                    heroSection = section;
-                }
-                if (!productsSection && (id.includes('featured') || (id.includes('collection') && !id.includes('collection_list')))) {
-                    productsSection = section;
-                }
-            });
-
-            if (heroSection && productsSection) {
-                // 只在产品区当前在 Hero 后面时才移动
-                if (heroSection.compareDocumentPosition(productsSection) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                    heroSection.parentElement.insertBefore(productsSection, heroSection);
-                    log('[AI-LP] ✅ Section reorder: products moved before hero (TikTok)');
+            var stored = sessionStorage.getItem(LP_PERSONALIZATION_KEY);
+            if (stored) {
+                var parsed = JSON.parse(stored);
+                if (parsed.fingerprint === fingerprint && Date.now() - parsed.timestamp < LP_CACHE_TTL) {
+                    _personalizationCache = parsed.config;
+                    log('[AI-LP] Personalization loaded from session cache');
+                    return Promise.resolve(parsed.config);
                 }
             }
-        } catch (err) {
-            log('[AI-LP] Section reorder error (graceful):', err);
-        }
+        } catch (e) { /* ignore */ }
+
+        var _llmFetchStart = Date.now();
+        log('[AI-LP] ⏱️ Personalization fetch started at', new Date().toISOString());
+
+        _personalizationPromise = fetch(CONFIG.apiUrl + '/personalize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                utmSource: utm.utmSource,
+                utmMedium: utm.utmMedium,
+                utmCampaign: utm.utmCampaign,
+                utmContent: utm.utmContent,
+                utmTerm: utm.utmTerm,
+            }),
+        })
+        .then(function (res) {
+            log('[AI-LP] ⏱️ Personalization fetch response:', res.status, 'in', (Date.now() - _llmFetchStart) + 'ms');
+            return res.ok ? res.json() : null;
+        })
+        .then(function (data) {
+            var elapsed = Date.now() - _llmFetchStart;
+            if (data && data.success && data.config) {
+                _personalizationCache = data.config;
+                try {
+                    sessionStorage.setItem(LP_PERSONALIZATION_KEY, JSON.stringify({
+                        fingerprint: fingerprint,
+                        config: data.config,
+                        timestamp: Date.now(),
+                    }));
+                } catch (e) { /* ignore */ }
+                log('[AI-LP] ⏱️ LLM personalization loaded in', elapsed + 'ms', data.cached ? '(server-cached)' : '(fresh)', 'serverTime:', data.processingTime + 'ms');
+                return data.config;
+            }
+            log('[AI-LP] ⏱️ Personalization response invalid/empty in', elapsed + 'ms');
+            return null;
+        })
+        .catch(function (err) {
+            var elapsed = Date.now() - _llmFetchStart;
+            log('[AI-LP] ⏱️ Personalization fetch FAILED in', elapsed + 'ms:', err && err.message ? err.message : err);
+            return null;
+        });
+
+        return _personalizationPromise;
     }
 
-    // --- 文案个性化执行 ---
+    // 立即开始预加载
+    preloadPersonalization();
+
+    // --- 产品过滤（关键词驱动，不依赖 LLM，保持瞬时） ---
 
     /**
-     * 根据 ruleId 查找匹配的 section 并替换文案。
-     * 保存原始文案到 data-ai-original-text，用于缓存恢复时先还原再重设。
+     * 从 UTM campaign/content 提取内容关键词
      */
-    function applyTextPersonalization(ruleId) {
-        try {
-            var rules = TEXT_PERSONALIZATION[ruleId];
-            if (!rules || rules.length === 0) return;
-
-            var main = document.querySelector('#MainContent, main, [role="main"]');
-            if (!main) return;
-
-            var sections = Array.from(main.querySelectorAll('.shopify-section, section'));
-
-            rules.forEach(function (rule) {
-                var matchPatterns = rule.sectionMatch.split(',');
-                var targetSection = null;
-
-                // 找到匹配的 section
-                for (var i = 0; i < sections.length; i++) {
-                    var sectionId = (sections[i].id || '').toLowerCase();
-                    var matched = matchPatterns.some(function (pattern) {
-                        return sectionId.includes(pattern.trim());
-                    });
-                    if (matched) {
-                        targetSection = sections[i];
-                        break;
-                    }
-                }
-
-                if (!targetSection) return;
-
-                // 在该 section 内找到目标元素
-                var el = targetSection.querySelector(rule.selector);
-                if (!el) return;
-
-                // 保存原始文案（只保存一次）
-                if (!el.dataset.aiOriginalText) {
-                    el.dataset.aiOriginalText = el.textContent;
-                }
-
-                el.textContent = rule.text;
-                log('[AI-LP] Text: "' + el.dataset.aiOriginalText.slice(0, 30) + '..." → "' + rule.text + '"');
-            });
-        } catch (err) {
-            log('[AI-LP] Text personalization error (graceful):', err);
-        }
-    }
-
-    /**
-     * 还原所有被个性化修改过的文案
-     */
-    function restoreOriginalTexts() {
-        try {
-            var elements = document.querySelectorAll('[data-ai-original-text]');
-            elements.forEach(function (el) {
-                el.textContent = el.dataset.aiOriginalText;
-                el.removeAttribute('data-ai-original-text');
-            });
-        } catch (err) {
-            // ignore
-        }
-    }
-
-    /**
-     * 根据 ruleId 查找规则的 action（用于缓存恢复时获取 sectionOrder 等配置）
-     */
-    function getActionForRule(ruleId) {
-        for (var i = 0; i < PERSONALIZATION_RULES.length; i++) {
-            if (PERSONALIZATION_RULES[i].id === ruleId) return PERSONALIZATION_RULES[i].action;
-        }
-        return DEFAULT_LP_ACTION;
-    }
-
-    // --- 上下文构建 ---
-
-    function buildLayoutContext() {
-        var utm = getUtmParams();
-        return {
-            utmSource: utm.utmSource,
-            utmCampaign: utm.utmCampaign,
-            utmMedium: utm.utmMedium,
-            utmContent: utm.utmContent,
-            trafficSource: classifyTrafficSource(utm.utmSource, document.referrer),
-            contentIntent: extractContentIntent(utm.utmCampaign, utm.utmContent),
-        };
-    }
-
-    function classifyTrafficSource(utmSource, referrer) {
-        var source = (utmSource || '').toLowerCase();
-        var ref = (referrer || '').toLowerCase();
-
-        if (source.includes('instagram') || source === 'ig') return 'instagram';
-        if (source.includes('tiktok') || source === 'tt') return 'tiktok';
-        if (source.includes('facebook') || source === 'fb') return 'facebook';
-        if (source.includes('google')) return 'google';
-        if (source.includes('email') || source.includes('newsletter')) return 'email';
-        if (ref.includes('instagram.com')) return 'instagram';
-        if (ref.includes('tiktok.com')) return 'tiktok';
-        if (ref.includes('facebook.com')) return 'facebook';
-        if (ref.includes('google.com') || ref.includes('google.co')) return 'google';
-
-        return source || 'direct';
-    }
-
     function extractContentIntent(campaign, content) {
         var raw = [campaign, content].filter(Boolean).join('-').toLowerCase();
         if (!raw) return [];
@@ -1845,81 +1757,43 @@
         return tokens.filter(function (t) { return !stopSet[t] && !/^\d+$/.test(t); });
     }
 
-    // --- 规则匹配 ---
+    /**
+     * 产品过滤配置（硬编码，不等 LLM，保持瞬时）
+     * 仅基于 dog/cat 关键词做白名单过滤
+     */
+    var FILTER_RULES = [
+        { keywords: ['dog', 'puppy', 'canine', 'pup'], relevantTags: ['dog'], relevantKeywords: ['dog', 'puppy', 'pup'] },
+        { keywords: ['cat', 'kitten', 'feline', 'kitty'], relevantTags: ['cat'], relevantKeywords: ['cat', 'kitten', 'kitty', 'mouse', 'mousey', 'birdy', 'fish'] },
+    ];
 
-    function selectPersonalizationRule(context) {
-        for (var i = 0; i < PERSONALIZATION_RULES.length; i++) {
-            var rule = PERSONALIZATION_RULES[i];
-            if (matchesLpRule(rule.match, context)) {
-                return { ruleId: rule.id, action: rule.action, matchType: 'explicit' };
-            }
+    function getFilterAction(contentIntent) {
+        for (var i = 0; i < FILTER_RULES.length; i++) {
+            var rule = FILTER_RULES[i];
+            var match = rule.keywords.some(function (kw) { return contentIntent.indexOf(kw) !== -1; });
+            if (match) return { relevantTags: rule.relevantTags, relevantKeywords: rule.relevantKeywords };
         }
-
-        // 自动意图匹配：UTM 关键词直接作为 relevantTags 尝试
-        if (context.contentIntent && context.contentIntent.length > 0) {
-            return {
-                ruleId: 'auto_intent',
-                action: {
-                    relevantTags: context.contentIntent,
-                    boostTags: context.contentIntent,
-                    relevantKeywords: context.contentIntent,
-                },
-                matchType: 'auto',
-            };
-        }
-
-        return { ruleId: 'default', action: DEFAULT_LP_ACTION, matchType: 'default' };
+        return { relevantTags: null, relevantKeywords: null };
     }
-
-    function matchesLpRule(conditions, context) {
-        if (conditions.contentKeywords && conditions.contentKeywords.length > 0) {
-            var hasMatch = conditions.contentKeywords.some(function (kw) {
-                return context.contentIntent.indexOf(kw) !== -1;
-            });
-            if (hasMatch) return true;
-        }
-
-        if (conditions.trafficSource && conditions.trafficSource.length > 0) {
-            if (conditions.trafficSource.indexOf(context.trafficSource) !== -1) return true;
-        }
-
-        return false;
-    }
-
-    // --- 产品相关性判断 ---
 
     function isProductRelevant(handle, meta, action) {
         var relevantTags = action.relevantTags;
         var relevantKeywords = action.relevantKeywords;
-
-        // null = 不过滤（显示全部）
         if (!relevantTags || relevantTags.length === 0) return true;
 
-        // 1) Tag 匹配（主要信号）
         if (meta && meta.tags && meta.tags.length > 0) {
-            var tagMatch = relevantTags.some(function (rt) {
-                return meta.tags.indexOf(rt) !== -1;
-            });
+            var tagMatch = relevantTags.some(function (rt) { return meta.tags.indexOf(rt) !== -1; });
             if (tagMatch) return true;
         }
 
-        // 2) Handle/title 关键词匹配（无 tag 时的兜底）
         if (relevantKeywords && relevantKeywords.length > 0) {
-            var searchStr = (handle || '') + ' ' + (meta && meta.title ? meta.title : '');
-            searchStr = searchStr.toLowerCase();
-            var kwMatch = relevantKeywords.some(function (kw) {
-                return searchStr.indexOf(kw) !== -1;
-            });
+            var searchStr = ((handle || '') + ' ' + (meta && meta.title ? meta.title : '')).toLowerCase();
+            var kwMatch = relevantKeywords.some(function (kw) { return searchStr.indexOf(kw) !== -1; });
             if (kwMatch) return true;
         }
 
-        // 3) 无数据可判断 → 保守显示
         if (!meta || (!meta.tags || meta.tags.length === 0)) return true;
-
         return false;
     }
-
-    // --- 产品过滤（白名单模式） ---
 
     function filterByRelevance(cards, productMeta, action) {
         if (!action.relevantTags || action.relevantTags.length === 0) {
@@ -1932,7 +1806,6 @@
         cards.forEach(function (card) {
             var handle = getProductHandleFromCard(card);
             var meta = handle ? productMeta[handle] : null;
-
             if (isProductRelevant(handle, meta, action)) {
                 relevant.push({ card: card, handle: handle });
             } else {
@@ -1940,14 +1813,12 @@
             }
         });
 
-        // 安全阀：相关产品太少则不过滤
         var MIN_VISIBLE = 2;
         if (relevant.length < MIN_VISIBLE) {
-            log('[AI-LP] Only', relevant.length, 'relevant products (min:', MIN_VISIBLE + '), skipping filter');
+            log('[AI-LP] Only', relevant.length, 'relevant products, skipping filter');
             return { visibleCards: cards.slice(), hiddenHandles: [] };
         }
 
-        // 隐藏不相关产品（同时隐藏 grid item，避免在 CSS grid 中留空位）
         var hiddenHandles = [];
         irrelevant.forEach(function (item) {
             item.card.classList.add('ai-lp-hidden');
@@ -1955,8 +1826,6 @@
             if (unit !== item.card) unit.classList.add('ai-lp-hidden');
             if (item.handle) hiddenHandles.push(item.handle);
         });
-
-        // 确保相关产品可见
         relevant.forEach(function (item) {
             item.card.classList.remove('ai-lp-hidden');
             var unit = getReorderableUnit(item.card);
@@ -1972,8 +1841,7 @@
 
     // --- 产品排序 ---
 
-    function reorderByRelevance(cards, productMeta, action) {
-        var boostTags = action.boostTags;
+    function reorderByRelevance(cards, productMeta, boostTags) {
         if (!boostTags || boostTags.length === 0) return;
         if (cards.length <= 1) return;
 
@@ -1987,9 +1855,7 @@
                 var matched = tags.some(function (t) {
                     return t.indexOf(bt) !== -1 || bt.indexOf(t) !== -1;
                 });
-                if (matched) {
-                    score += (boostTags.length - priority) * 10;
-                }
+                if (matched) score += (boostTags.length - priority) * 10;
             });
 
             return { card: card, score: score, originalIndex: originalIndex };
@@ -2000,55 +1866,33 @@
             return a.originalIndex - b.originalIndex;
         });
 
-        // DOM 重排
         var container = findCardsContainer(cards);
         if (!container) return;
 
-        // 找到每个卡片的可重排单元（可能是 <li> 而非卡片本身）
         var units = scored.map(function (s) { return getReorderableUnit(s.card); });
-
-        // 使用 insertBefore 按顺序移动，避免破坏 DOM 结构
         for (var i = 0; i < units.length; i++) {
             container.appendChild(units[i]);
         }
-
-        log('[AI-LP] Reordered', scored.length, 'products');
+        log('[AI-LP] Reordered', scored.length, 'products by:', boostTags.join(', '));
     }
 
     function findCardsContainer(cards) {
         if (cards.length === 0) return null;
-
-        // 获取每个卡片的可重排单元的父元素
         var units = cards.map(function (c) { return getReorderableUnit(c); });
         var parentCounts = new Map();
-
         units.forEach(function (unit) {
             var parent = unit.parentElement;
-            if (parent) {
-                parentCounts.set(parent, (parentCounts.get(parent) || 0) + 1);
-            }
+            if (parent) parentCounts.set(parent, (parentCounts.get(parent) || 0) + 1);
         });
-
         var best = null;
         var bestCount = 0;
         parentCounts.forEach(function (count, parent) {
-            if (count > bestCount) {
-                bestCount = count;
-                best = parent;
-            }
+            if (count > bestCount) { bestCount = count; best = parent; }
         });
-
         return best;
     }
 
     function getReorderableUnit(card) {
-        // 在 Dawn 主题中，卡片结构通常是：
-        // <ul class="grid product-grid">
-        //   <li class="grid__item">
-        //     <div class="card-wrapper">...</div>  ← findProductCards() 返回的
-        //   </li>
-        // </ul>
-        // 我们需要移动 <li>，不是 <div>
         var current = card;
         for (var i = 0; i < 5 && current.parentElement; i++) {
             var parent = current.parentElement;
@@ -2058,15 +1902,198 @@
                 parent.classList.contains('product-grid') ||
                 parent.classList.contains('collection-product-list') ||
                 parent.classList.contains('product-list')) {
-                return current; // current 是这个容器的直接子元素
+                return current;
             }
             current = parent;
         }
-        // 兜底：返回卡片的直接父元素
         return card.parentElement || card;
     }
 
-    // --- 布局缓存与恢复 ---
+    // --- 视觉组件注入 ---
+
+    function findSectionByPattern(patterns) {
+        var main = document.querySelector('#MainContent, main, [role="main"]');
+        if (!main) return null;
+        var sections = main.querySelectorAll('.shopify-section, section');
+        for (var i = 0; i < sections.length; i++) {
+            var id = (sections[i].id || '').toLowerCase();
+            for (var j = 0; j < patterns.length; j++) {
+                if (id.includes(patterns[j])) return sections[i];
+            }
+        }
+        return null;
+    }
+
+    function injectVibeBar(config) {
+        try {
+            if (document.querySelector('[data-ai-lp-vibe-bar]')) return;
+            if (!config || !config.copy || !config.copy.vibeBarText) return;
+
+            var heroSection = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
+            if (!heroSection) return;
+
+            var bar = document.createElement('div');
+            bar.className = 'ai-lp-vibe-bar';
+            bar.setAttribute('data-ai-lp-vibe-bar', 'true');
+            bar.innerHTML = '<span class="ai-lp-vibe-bar__icon">' + (config.copy.vibeBarIcon || '🐾') + '</span>' +
+                            '<span class="ai-lp-vibe-bar__text">' + config.copy.vibeBarText + '</span>';
+
+            heroSection.parentElement.insertBefore(bar, heroSection.nextSibling);
+            log('[AI-LP] ✅ Vibe Bar injected');
+        } catch (err) {
+            log('[AI-LP] Vibe Bar error:', err);
+        }
+    }
+
+    function injectTrustBlock(config) {
+        try {
+            if (document.querySelector('[data-ai-lp-trust-block]')) return;
+            if (!config || !config.copy || !config.copy.trustItems) return;
+            if (config.visual && config.visual.intensity !== 'full') return;
+
+            var productsSection = findSectionByPattern(['featured', 'collection']);
+            // 注意排除 collection_list
+            if (productsSection && (productsSection.id || '').toLowerCase().includes('collection_list')) {
+                productsSection = null;
+            }
+            if (!productsSection) return;
+
+            var trustIcons = ['✅', '🚚', '🌿'];
+            var items = config.copy.trustItems;
+
+            var block = document.createElement('div');
+            block.className = 'ai-lp-trust-block';
+            block.setAttribute('data-ai-lp-trust-block', 'true');
+
+            for (var i = 0; i < 3 && i < items.length; i++) {
+                block.innerHTML += '<div class="ai-lp-trust-item">' +
+                    '<span class="ai-lp-trust-item__icon">' + trustIcons[i] + '</span>' +
+                    '<span class="ai-lp-trust-item__text">' + items[i] + '</span>' +
+                    '</div>';
+            }
+
+            productsSection.parentElement.insertBefore(block, productsSection.nextSibling);
+            log('[AI-LP] ✅ Trust Block injected');
+        } catch (err) {
+            log('[AI-LP] Trust Block error:', err);
+        }
+    }
+
+    function applyGridLayout(container, cols) {
+        try {
+            if (!container || !cols) return;
+            if (cols === 2) {
+                container.classList.add('ai-lp-grid-2col');
+            } else {
+                container.classList.remove('ai-lp-grid-2col');
+            }
+            log('[AI-LP] Grid layout:', cols, 'columns');
+        } catch (err) {
+            log('[AI-LP] Grid layout error:', err);
+        }
+    }
+
+    function flipImageWithText(shouldFlip) {
+        try {
+            var iwtSection = findSectionByPattern(['image_with_text']);
+            if (!iwtSection) return;
+
+            if (shouldFlip) {
+                iwtSection.classList.add('ai-lp-iwt-flip');
+            } else {
+                iwtSection.classList.remove('ai-lp-iwt-flip');
+            }
+            log('[AI-LP] IWT flip:', shouldFlip);
+        } catch (err) {
+            log('[AI-LP] IWT flip error:', err);
+        }
+    }
+
+    function applyTextFromConfig(config) {
+        try {
+            if (!config || !config.copy) return;
+
+            var textRules = [
+                { patterns: ['image_banner', 'slideshow', 'hero'], selector: 'h2, .banner__heading, .slideshow__heading', text: config.copy.heroTitle },
+                { patterns: ['featured'], selector: 'h2, .title, .collection__title', text: config.copy.featuredTitle },
+                { patterns: ['image_with_text'], selector: 'h2, .image-with-text__heading', text: config.copy.iwtTitle },
+                { patterns: ['image_with_text'], selector: '.image-with-text__text p, .rte p, p', text: config.copy.iwtBody },
+            ];
+
+            textRules.forEach(function (rule) {
+                if (!rule.text) return;
+                var section = findSectionByPattern(rule.patterns);
+                if (!section) return;
+                var el = section.querySelector(rule.selector);
+                if (!el) return;
+                if (!el.dataset.aiOriginalText) {
+                    el.dataset.aiOriginalText = el.textContent;
+                }
+                el.textContent = rule.text;
+                log('[AI-LP] Text: "' + (el.dataset.aiOriginalText || '').slice(0, 25) + '..." → "' + rule.text + '"');
+            });
+        } catch (err) {
+            log('[AI-LP] Text personalization error:', err);
+        }
+    }
+
+    /**
+     * 应用所有 LLM 驱动的视觉变化（Phase 2）
+     */
+    function applyLLMVisualChanges(config, container) {
+        if (!config) return;
+
+        var visual = config.visual || {};
+        var intensity = visual.intensity || 'none';
+
+        if (intensity === 'none') {
+            log('[AI-LP] Visual intensity: none, skipping visual changes');
+            return;
+        }
+
+        // 文案个性化（light + full）
+        applyTextFromConfig(config);
+
+        // Vibe Bar（light + full）
+        injectVibeBar(config);
+
+        if (intensity === 'full') {
+            // Trust Block
+            injectTrustBlock(config);
+
+            // Grid layout
+            if (container && visual.gridCols) {
+                applyGridLayout(container, visual.gridCols);
+            }
+
+            // IWT flip
+            if (visual.flipIWT) {
+                flipImageWithText(true);
+            }
+        }
+
+        log('[AI-LP] ✅ Visual changes applied (intensity: ' + intensity + ')');
+    }
+
+    function cleanupInjectedElements() {
+        try {
+            var vibeBar = document.querySelector('[data-ai-lp-vibe-bar]');
+            if (vibeBar) vibeBar.remove();
+            var trustBlock = document.querySelector('[data-ai-lp-trust-block]');
+            if (trustBlock) trustBlock.remove();
+            var elements = document.querySelectorAll('[data-ai-original-text]');
+            elements.forEach(function (el) {
+                el.textContent = el.dataset.aiOriginalText;
+                el.removeAttribute('data-ai-original-text');
+            });
+            var flipped = document.querySelectorAll('.ai-lp-iwt-flip');
+            flipped.forEach(function (el) { el.classList.remove('ai-lp-iwt-flip'); });
+            var gridOverrides = document.querySelectorAll('.ai-lp-grid-2col');
+            gridOverrides.forEach(function (el) { el.classList.remove('ai-lp-grid-2col'); });
+        } catch (err) { /* ignore */ }
+    }
+
+    // --- 布局缓存 ---
 
     function getUtmFingerprint() {
         var utm = getUtmParams();
@@ -2076,7 +2103,6 @@
     function cacheLayoutDecision(decision) {
         try {
             sessionStorage.setItem(LP_CACHE_KEY, JSON.stringify({
-                ruleId: decision.ruleId,
                 productOrder: decision.productOrder,
                 hiddenProducts: decision.hiddenProducts,
                 utmFingerprint: decision.utmFingerprint,
@@ -2092,25 +2118,19 @@
             var raw = sessionStorage.getItem(LP_CACHE_KEY);
             if (!raw) return null;
             var state = JSON.parse(raw);
-
-            // UTM 一致性校验
             if (state.utmFingerprint !== getUtmFingerprint()) {
                 sessionStorage.removeItem(LP_CACHE_KEY);
                 return null;
             }
-            // TTL 校验
             if (Date.now() - state.timestamp > LP_CACHE_TTL) {
                 sessionStorage.removeItem(LP_CACHE_KEY);
                 return null;
             }
             return state;
-        } catch (e) {
-            return null;
-        }
+        } catch (e) { return null; }
     }
 
     function restoreFromCache(cards, cached) {
-        // 恢复排序
         if (cached.productOrder && cached.productOrder.length > 0) {
             var container = findCardsContainer(cards);
             if (container) {
@@ -2119,31 +2139,21 @@
                     var handle = getProductHandleFromCard(card);
                     if (handle) unitMap.set(handle, getReorderableUnit(card));
                 });
-
                 var placed = {};
-                // 先按缓存顺序放
                 cached.productOrder.forEach(function (handle) {
                     var unit = unitMap.get(handle);
-                    if (unit) {
-                        container.appendChild(unit);
-                        placed[handle] = true;
-                    }
+                    if (unit) { container.appendChild(unit); placed[handle] = true; }
                 });
-                // 再放缓存中没有的（新产品）
                 cards.forEach(function (card) {
                     var handle = getProductHandleFromCard(card);
-                    if (handle && !placed[handle]) {
-                        container.appendChild(getReorderableUnit(card));
-                    }
+                    if (handle && !placed[handle]) container.appendChild(getReorderableUnit(card));
                 });
             }
         }
 
-        // 恢复显隐（同时处理 grid item）
         if (cached.hiddenProducts && cached.hiddenProducts.length > 0) {
             var hiddenSet = {};
             cached.hiddenProducts.forEach(function (h) { hiddenSet[h] = true; });
-
             cards.forEach(function (card) {
                 var handle = getProductHandleFromCard(card);
                 var unit = getReorderableUnit(card);
@@ -2156,22 +2166,17 @@
                 }
             });
         }
-
-        log('[AI-LP] Restored from cache:', cached.ruleId);
+        log('[AI-LP] Restored product layout from cache');
     }
 
-    // --- 主入口 ---
+    // --- 主入口（两阶段） ---
 
     async function applyLandingPersonalization() {
         try {
-            // 仅首页执行
             var path = window.location.pathname;
             if (path !== '/' && path !== '') return;
 
             var allCards = findProductCards();
-            // ★ 只保留真正链接到 /products/ 的卡片
-            // 排除 Collection 卡片（链接到 /collections/）和其他非产品卡片
-            // 避免把 Collection 区块误移到 Featured Products 容器中
             var cards = allCards.filter(function (card) {
                 return getProductHandleFromCard(card) !== null;
             });
@@ -2183,93 +2188,103 @@
                 return;
             }
 
-            // === 缓存快速路径 ===
-            var cached = restoreLayoutDecision();
-            if (cached) {
-                var appliedRule = container.getAttribute('data-ai-lp-applied');
-                if (appliedRule === cached.ruleId) {
-                    log('[AI-LP] Already applied:', cached.ruleId, '- skipping');
-                    return;
-                }
-                restoreFromCache(cards, cached);
-                // 恢复 Section 排序和文案（从规则配置重新执行）
-                var cachedAction = getActionForRule(cached.ruleId);
-                var cachedContext = buildLayoutContext();
-                reorderSections(cachedAction, cachedContext);
-                restoreOriginalTexts(); // 先还原再重设，避免叠加
-                applyTextPersonalization(cached.ruleId);
-                container.setAttribute('data-ai-lp-applied', cached.ruleId);
+            // 幂等检查
+            if (container.getAttribute('data-ai-lp-applied') === 'true') {
+                log('[AI-LP] Already applied, skipping');
                 return;
             }
 
-            // === 计算路径 ===
-            log('[AI-LP] Computing personalization...');
+            // 清理上一次的注入（SPA 导航后重新应用时需要）
+            cleanupInjectedElements();
 
-            var context = buildLayoutContext();
-            var result = selectPersonalizationRule(context);
-            var ruleId = result.ruleId;
-            var action = result.action;
+            var utm = getUtmParams();
+            var contentIntent = extractContentIntent(utm.utmCampaign, utm.utmContent);
 
-            log('[AI-LP] Context:', context);
-            log('[AI-LP] Matched rule:', ruleId, '(' + result.matchType + ')');
+            // ========================================
+            // Phase 1: 瞬时操作（不等 LLM）
+            // ========================================
 
-            // 默认规则且无 boost → 跳过（页面保持原样）
-            if (ruleId === 'default') {
-                container.setAttribute('data-ai-lp-applied', 'default');
-                log('[AI-LP] Default rule, no changes needed');
-                return;
-            }
-
-            // 等待产品元数据（带超时保护）
+            // 1a. 等待产品元数据
             var productMeta = _productMetaCache;
             if (!productMeta) {
                 productMeta = await Promise.race([
                     _productMetaPromise || Promise.resolve({}),
                     new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 500); }),
                 ]);
-                if (!productMeta) {
-                    log('[AI-LP] Product meta timeout, using handle inference fallback');
-                    productMeta = {};
-                }
+                if (!productMeta) productMeta = {};
             }
 
-            // === Step 1: 产品过滤 ===
-            var filterResult = filterByRelevance(cards, productMeta, action);
+            // 1b. 产品过滤（硬编码关键词，瞬时）
+            var filterAction = getFilterAction(contentIntent);
+            var filterResult = filterByRelevance(cards, productMeta, filterAction);
             var visibleCards = filterResult.visibleCards;
             var hiddenHandles = filterResult.hiddenHandles;
 
-            // === Step 1b: 产品排序（campaign 关键词驱动，而非平台绑定） ===
-            // 用 contentIntent 作为 boostTags：utm_campaign=dog-toy → boost ['dog','toy']
-            // 有更多匹配标签的产品排更前面
-            var campaignBoostAction = { boostTags: context.contentIntent || [] };
-            reorderByRelevance(visibleCards, productMeta, campaignBoostAction);
+            log('[AI-LP] Phase 1 done: filtered', visibleCards.length, 'visible,', hiddenHandles.length, 'hidden');
 
-            // 收集排序后的顺序
+            // 1c. 检查布局缓存（SPA 返回时恢复排序）
+            var cached = restoreLayoutDecision();
+            if (cached) {
+                restoreFromCache(cards, cached);
+                visibleCards = cards.filter(function (c) { return !c.classList.contains('ai-lp-hidden'); });
+            }
+
+            // ========================================
+            // Phase 2: LLM 驱动（异步，最多等 10s）
+            // ========================================
+
+            var _phase2Start = Date.now();
+            var llmConfig = _personalizationCache;
+            if (llmConfig) {
+                log('[AI-LP] ⏱️ Phase 2: LLM config already in cache (0ms wait)');
+            }
+            if (!llmConfig) {
+                log('[AI-LP] ⏱️ Phase 2: Waiting for LLM response (max 10s)...');
+                llmConfig = await Promise.race([
+                    _personalizationPromise || Promise.resolve(null),
+                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 10000); }),
+                ]);
+                log('[AI-LP] ⏱️ Phase 2: LLM wait completed in', (Date.now() - _phase2Start) + 'ms', llmConfig ? '(got config)' : '(timeout/null)');
+            }
+
+            if (llmConfig) {
+                log('[AI-LP] Phase 2: LLM config available, applying...');
+
+                // 2a. LLM 驱动的产品排序
+                var sortHints = llmConfig.sortHints || [];
+                if (sortHints.length > 0) {
+                    reorderByRelevance(visibleCards, productMeta, sortHints);
+                }
+
+                // 2b. 视觉变化（Vibe Bar, Trust Block, Grid, IWT flip, Text）
+                applyLLMVisualChanges(llmConfig, container);
+            } else {
+                log('[AI-LP] Phase 2: No LLM config, using fallback');
+
+                // 降级：用 contentIntent 做基本排序
+                if (contentIntent.length > 0) {
+                    reorderByRelevance(visibleCards, productMeta, contentIntent);
+                }
+            }
+
+            // 收集最终排序并缓存
             var orderedHandles = visibleCards.map(function (c) {
                 return getProductHandleFromCard(c);
             }).filter(Boolean);
 
-            // === Step 2: Section 重排序 ===
-            reorderSections(action, context);
-
-            // === Step 3: 文案个性化 ===
-            applyTextPersonalization(ruleId);
-
-            // 标记 + 缓存
-            container.setAttribute('data-ai-lp-applied', ruleId);
+            container.setAttribute('data-ai-lp-applied', 'true');
             cacheLayoutDecision({
-                ruleId: ruleId,
                 productOrder: orderedHandles,
                 hiddenProducts: hiddenHandles,
                 utmFingerprint: getUtmFingerprint(),
             });
 
-            log('[AI-LP] ✅ Personalization applied: rule=' + ruleId +
+            log('[AI-LP] ✅ Personalization complete' +
+                (llmConfig ? ' (LLM-driven)' : ' (fallback)') +
                 ', visible=' + visibleCards.length +
                 ', hidden=' + hiddenHandles.length);
 
         } catch (err) {
-            // 降级：任何错误不影响页面正常展示
             log('[AI-LP] ❌ Error (graceful degradation):', err);
             if (typeof console !== 'undefined' && console.error) {
                 console.error('[AI-LP] Personalization error:', err);
