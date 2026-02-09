@@ -149,31 +149,31 @@ const THEME_DESCRIPTIONS = `
 THEME 1 - "Spotlight": Products→IWT→Collections. 2-column large grid with first card hero (spans 2 cols), card shadows, hover zoom, IWT flipped with overlap, sticky Vibe Bar, Promo Banner. DRAMATIC: big product photos, bold layout.
 Best for: product launches, new arrivals, specific product campaigns, sales events.
 
-THEME 2 - "Story Arc": IWT→Products→Collections (story-first). 3-column grid, rounded cards with shadow, IWT flipped with overlap, warm background tint, spacious layout, section dividers, Social Proof Bar. DRAMATIC: brand story leads, emotional flow.
+THEME 2 - "Story Arc": IWT→Products→Collections (story-first). Default slider layout, rounded cards with shadow, IWT flipped with overlap, warm background tint, spacious layout, section dividers, Social Proof Bar. DRAMATIC: brand story leads, emotional flow.
 Best for: brand storytelling, new pet parent onboarding, emotional/nurturing campaigns, starter kits, first-time buyers.
 
 THEME 3 - "Flash Deal": Products→Collections→IWT (shop-first). 2-column grid, hover zoom + lift effect, sticky Vibe Bar, Promo Banner, compact spacing. DRAMATIC: urgency-focused, dense product display.
 Best for: flash sales, limited-time offers, promotions, discount campaigns, urgency/scarcity campaigns.
 
-THEME 4 - "Gallery": Products→IWT→Collections (standard). 2-column grid, rounded cards with shadow, parallax hero, warm background, spacious layout, Category Pills navigation. DRAMATIC: curated visual gallery feel.
+THEME 4 - "Gallery": Products→IWT→Collections (standard). Default slider layout, rounded cards with shadow, parallax hero, warm background, spacious layout, Category Pills navigation. DRAMATIC: curated visual gallery feel.
 Best for: visual/aesthetic campaigns, Instagram-style content, curated collections, lifestyle photography campaigns.
 
-THEME 5 - "Discovery": Collections→IWT→Products (discovery journey). 3-column grid, IWT flipped, parallax hero, section dividers, Category Pills. DRAMATIC: exploration-focused, collections lead.
+THEME 5 - "Discovery": Collections→IWT→Products (discovery journey). Default slider layout, IWT flipped, parallax hero, section dividers, Category Pills. DRAMATIC: exploration-focused, collections lead.
 Best for: new visitors, exploration campaigns, broad audience targeting, awareness campaigns, SEO/organic traffic.
 
-THEME 6 - "Luxe": Products→IWT→Collections (standard). 2-column grid with first card hero, elegant card borders + shadow, IWT overlap, spacious layout, Social Proof Bar. DRAMATIC: premium white-space, refined.
+THEME 6 - "Luxe": Products→IWT→Collections (standard). Default slider layout, elegant card borders + shadow, IWT overlap, spacious layout, Social Proof Bar. DRAMATIC: premium white-space, refined.
 Best for: premium/luxury positioning, high-value products, gift campaigns, special occasions, quality-focused.
 
-THEME 7 - "Playful": Products→Collections→IWT (shop-first). 3-column grid with first card hero, rounded cards, hover zoom, IWT flipped, warm background, sticky Vibe Bar, Promo Banner. DRAMATIC: energetic, fun layout.
+THEME 7 - "Playful": Products→Collections→IWT (shop-first). Default slider layout, rounded cards, hover zoom, IWT flipped, warm background, sticky Vibe Bar, Promo Banner. DRAMATIC: energetic, fun layout.
 Best for: active/outdoor campaigns, toys & play, young energetic audience, TikTok-style, fun/playful campaigns.
 
-THEME 8 - "Cozy": IWT→Products→Collections (story-first). 3-column grid, rounded cards, warm background, spacious layout, section dividers, Social Proof Bar. DRAMATIC: warm, relaxed, homey feel.
+THEME 8 - "Cozy": IWT→Products→Collections (story-first). Default slider layout, rounded cards, warm background, spacious layout, section dividers, Social Proof Bar. DRAMATIC: warm, relaxed, homey feel.
 Best for: comfort products, beds & blankets, relaxation campaigns, returning customers, seasonal/holiday gifting.
 
 THEME 9 - "Impact": Products→IWT→Collections (standard). 2-column grid with first card hero, card shadows + hover zoom + lift, IWT flipped with overlap, sticky Vibe Bar, Promo Banner, compact spacing. DRAMATIC: high-conversion, bold.
 Best for: conversion-focused campaigns, retargeting, high-intent audiences, performance marketing, best-seller pushes.
 
-THEME 10 - "Clean": Products→IWT→Collections (standard). 3-column grid, subtle hover zoom only. Minimal visual changes, clean default look. Only Vibe Bar and Trust Block, no extra blocks.
+THEME 10 - "Clean": Products→IWT→Collections (standard). Default slider layout, subtle hover zoom only. Minimal visual changes, clean default look. Only Vibe Bar and Trust Block, no extra blocks.
 Best for: generic/direct traffic, unclear campaign intent, catch-all default, simple browsing.
 `;
 

@@ -632,6 +632,12 @@
         max-width: 100% !important;
         object-fit: cover !important;
     }
+    /* --- Fix: product info (title/price) left padding in grid mode --- */
+    .ai-lp-grid-2col .card__content,
+    .ai-lp-grid-2col .card-information {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
     
     /* --- IWT flip (direction trick) --- */
     .ai-lp-iwt-flip .image-with-text,
@@ -1022,28 +1028,25 @@
                 <div class="ai-welcome-image">
                     <img src="https://shopify-ai-script-production.up.railway.app/public/KWFfp1g77kxJMSnHD87aX_WNRvdBZc.png" alt="Happy pets">
                 </div>
-                <div class="ai-welcome-subtitle">Personalized Pet Experience</div>
+                <div class="ai-welcome-subtitle">Your Personalized Pet Store</div>
                 <h2 class="ai-welcome-title">${titleText}</h2>
                 <p class="ai-welcome-text">
-                    We're excited to show you something special! Our store uses <strong>AI-powered dynamic product imagery</strong> 
-                    to create a unique shopping experience tailored just for you and your furry friends.
-                    <br><br>
-                    Every product photo you see is <strong>generated in real-time</strong>, matching current trends, 
-                    seasonal vibes, and your browsing context. Images may take a few moments to appear — 
-                    it's worth the wait!
+                    Your entire experience is <strong>tailored to you</strong> — from page layout and product picks 
+                    to AI-generated imagery, everything is personalized in real-time for you and your furry friend. 
+                    Content may take a moment to appear — it's worth the wait!
                 </p>
                 <div class="ai-welcome-features">
                     <div class="ai-welcome-feature">
                         <span class="ai-welcome-feature-icon">✨</span>
-                        <span>AI-Generated</span>
+                        <span>AI-Powered</span>
                     </div>
                     <div class="ai-welcome-feature">
                         <span class="ai-welcome-feature-icon">🎯</span>
-                        <span>Personalized</span>
+                        <span>Tailored Layout</span>
                     </div>
                     <div class="ai-welcome-feature">
                         <span class="ai-welcome-feature-icon">🐾</span>
-                        <span>Pet-Focused</span>
+                        <span>Smart Picks</span>
                     </div>
                 </div>
                 <button class="ai-welcome-close" id="ai-welcome-close">
@@ -2043,7 +2046,7 @@
               flipIWT: true, iwtOverlap: true, parallax: false, warmBg: false, spacing: null,
               stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
         2:  { name: 'Story Arc',
-              sectionOrder: ['iwt','products','collections'], gridCols: 3, featuredHero: false,
+              sectionOrder: ['iwt','products','collections'], gridCols: null, featuredHero: false,
               cardShadow: true, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: true,
               flipIWT: true, iwtOverlap: true, parallax: false, warmBg: true, spacing: 'spacious',
               stickyVibe: false, dividers: true, promoBanner: false, socialProof: true, categoryPills: false },
@@ -2053,27 +2056,27 @@
               flipIWT: false, iwtOverlap: false, parallax: false, warmBg: false, spacing: 'compact',
               stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
         4:  { name: 'Gallery',
-              sectionOrder: ['products','iwt','collections'], gridCols: 2, featuredHero: false,
+              sectionOrder: ['products','iwt','collections'], gridCols: null, featuredHero: false,
               cardShadow: true, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: true,
               flipIWT: false, iwtOverlap: false, parallax: true, warmBg: true, spacing: 'spacious',
               stickyVibe: false, dividers: false, promoBanner: false, socialProof: false, categoryPills: true },
         5:  { name: 'Discovery',
-              sectionOrder: ['collections','iwt','products'], gridCols: 3, featuredHero: false,
+              sectionOrder: ['collections','iwt','products'], gridCols: null, featuredHero: false,
               cardShadow: false, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: false,
               flipIWT: true, iwtOverlap: false, parallax: true, warmBg: false, spacing: null,
               stickyVibe: false, dividers: true, promoBanner: false, socialProof: false, categoryPills: true },
         6:  { name: 'Luxe',
-              sectionOrder: ['products','iwt','collections'], gridCols: 2, featuredHero: true,
+              sectionOrder: ['products','iwt','collections'], gridCols: null, featuredHero: false,
               cardShadow: true, cardBorder: true, hoverZoom: false, hoverLift: false, rounded: false,
               flipIWT: false, iwtOverlap: true, parallax: false, warmBg: false, spacing: 'spacious',
               stickyVibe: false, dividers: false, promoBanner: false, socialProof: true, categoryPills: false },
         7:  { name: 'Playful',
-              sectionOrder: ['products','collections','iwt'], gridCols: 3, featuredHero: true,
+              sectionOrder: ['products','collections','iwt'], gridCols: null, featuredHero: false,
               cardShadow: false, cardBorder: false, hoverZoom: true, hoverLift: false, rounded: true,
               flipIWT: true, iwtOverlap: false, parallax: false, warmBg: true, spacing: null,
               stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
         8:  { name: 'Cozy',
-              sectionOrder: ['iwt','products','collections'], gridCols: 3, featuredHero: false,
+              sectionOrder: ['iwt','products','collections'], gridCols: null, featuredHero: false,
               cardShadow: false, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: true,
               flipIWT: false, iwtOverlap: false, parallax: false, warmBg: true, spacing: 'spacious',
               stickyVibe: false, dividers: true, promoBanner: false, socialProof: true, categoryPills: false },
@@ -2083,7 +2086,7 @@
               flipIWT: true, iwtOverlap: true, parallax: false, warmBg: false, spacing: 'compact',
               stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
         10: { name: 'Clean',
-              sectionOrder: ['products','iwt','collections'], gridCols: 3, featuredHero: false,
+              sectionOrder: ['products','iwt','collections'], gridCols: null, featuredHero: false,
               cardShadow: false, cardBorder: false, hoverZoom: true, hoverLift: false, rounded: false,
               flipIWT: false, iwtOverlap: false, parallax: false, warmBg: false, spacing: null,
               stickyVibe: false, dividers: false, promoBanner: false, socialProof: false, categoryPills: false },
@@ -2619,14 +2622,14 @@
             }
             // Fix image sizes attribute — Dawn's srcset uses sizes based on slider widths,
             // which causes browsers to load tiny images when we switch to grid.
-            // Update sizes to match actual grid column widths.
-            var newSizes = theme.gridCols === 2
-                ? '(min-width: 750px) calc(50vw - 4rem), calc(100vw - 2rem)'
-                : '(min-width: 990px) calc(33vw - 3rem), (min-width: 750px) calc(50vw - 3rem), calc(100vw - 2rem)';
-            container.querySelectorAll('img[sizes]').forEach(function (img) {
-                img.setAttribute('sizes', newSizes);
-            });
-            log('[AI-LP] Updated img sizes for', theme.gridCols + '-col grid');
+            // Only update when gridCols is set (2-col); default layout keeps original sizes.
+            if (theme.gridCols === 2) {
+                var newSizes = '(min-width: 750px) calc(50vw - 4rem), calc(100vw - 2rem)';
+                container.querySelectorAll('img[sizes]').forEach(function (img) {
+                    img.setAttribute('sizes', newSizes);
+                });
+                log('[AI-LP] Updated img sizes for 2-col grid');
+            }
         }
 
         // === Featured hero card (first card spans 2 cols) ===
