@@ -596,6 +596,27 @@
         padding-left: 0.5rem;
     }
     
+    /* --- Fix: ensure images fill cards properly in grid mode --- */
+    .ai-lp-grid-2col .card-wrapper,
+    .ai-lp-grid-3col .card-wrapper {
+        width: 100% !important;
+    }
+    .ai-lp-grid-2col .card__media img,
+    .ai-lp-grid-3col .card__media img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+    .ai-lp-grid-2col .card__media .media,
+    .ai-lp-grid-3col .card__media .media {
+        overflow: hidden !important;
+    }
+    /* Override Dawn's sizes attribute which references slider widths */
+    .ai-lp-grid-2col .card__media img,
+    .ai-lp-grid-3col .card__media img {
+        max-width: 100% !important;
+    }
+    
     /* --- IWT flip (direction trick) --- */
     .ai-lp-iwt-flip .image-with-text,
     .ai-lp-iwt-flip .image-with-text__grid,
@@ -622,15 +643,17 @@
         transform: scale(1.06) !important;
     }
     
-    /* --- Rounded cards --- */
-    .ai-lp-rounded .card__media,
+    /* --- Rounded cards (all Dawn layers must match) --- */
     .ai-lp-rounded .card-wrapper .card,
-    .ai-lp-rounded .card--standard {
-        border-radius: 20px !important;
+    .ai-lp-rounded .card--standard,
+    .ai-lp-rounded .card__inner {
+        border-radius: 16px !important;
         overflow: hidden !important;
     }
+    .ai-lp-rounded .card__media,
+    .ai-lp-rounded .card__media .media,
     .ai-lp-rounded .card__media img {
-        border-radius: 20px !important;
+        border-radius: 16px 16px 0 0 !important;
     }
     
     /* --- Parallax hero --- */

@@ -116,15 +116,18 @@ ${basePrompt}
 
 QUALITY: High-end e-commerce photography, luxury brand aesthetic.`;
     } else if (imageType === 'collection') {
-        // Collection 图：展示系列的整体感
-        return `Transform this collection hero image.
+        // Collection 图：聚焦单一品类 + 宠物互动
+        return `Create a collection category hero image for a pet brand.
 
-REQUIREMENTS:
-- Maintain the products' visual identity
-- Create a cohesive scene that represents the collection theme
-- ${basePrompt}
+CRITICAL:
+- Show ONLY products from ONE category (do NOT mix different product types)
+- Include ONE happy pet naturally interacting with the products
+- The pet's joy and engagement is the emotional focal point
 
-QUALITY: Premium lifestyle photography, curated collection aesthetic.`;
+SCENE:
+${basePrompt}
+
+QUALITY: Premium lifestyle pet photography, bright and warm, clean background.`;
     } else {
         // Banner 图：基于原图风格创意重构
         return `Reimagine this banner image with a fresh creative direction.

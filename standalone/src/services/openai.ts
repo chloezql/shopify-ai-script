@@ -375,56 +375,48 @@ async function generateCollectionPrompt(
   context: UserContext,
   styleHint: string
 ): Promise<string> {
-  // 构建 collection 信息
-  let collectionInfo = '';
-  if (context.collectionTitle) {
-    collectionInfo += `Collection: "${context.collectionTitle}"`;
-  }
+  // 构建 collection 信息 — 只关注 collection 本身，不考虑 UTM/用户个性化
+  const collectionTitle = context.collectionTitle || 'pet products';
+  let collectionInfo = `Collection: "${collectionTitle}"`;
   if (context.collectionDescription) {
     collectionInfo += `\nDescription: ${context.collectionDescription.slice(0, 150)}`;
   }
   if (context.productNames && context.productNames.length > 0) {
-    collectionInfo += `\nProducts in this collection: ${context.productNames.join(', ')}`;
-  }
-  if (context.productCount) {
-    collectionInfo += ` (${context.productCount} products total)`;
+    collectionInfo += `\nExample products: ${context.productNames.join(', ')}`;
   }
 
-  const utmInfo = formatUtmInfo(context);
+  const systemPrompt = `You are a creative director for a premium PET PRODUCT e-commerce brand called "The Pet Brand Kura".
 
-  const systemPrompt = `You are a creative director for premium PET PRODUCT e-commerce.
-
-Your task: Generate a cohesive visual prompt for a COLLECTION hero image.
+Your task: Generate a visual prompt for a COLLECTION category image.
 
 ## COLLECTION INFO
-${collectionInfo || 'General pet products collection'}
+${collectionInfo}
 
-## UTM & AUDIENCE CONTEXT
-${utmInfo}
-
-## REQUIREMENTS
-1. Create a lifestyle scene that represents the ENTIRE collection theme
-2. Show multiple products or a curated arrangement that suggests variety
-3. Include relevant pets based on UTM keywords or collection theme
-4. Maintain brand consistency with premium aesthetic
-5. The image should tell a story about the collection's purpose
+## CRITICAL RULES
+1. Show ONLY products that match THIS collection's category — NO mixing product types
+   - If the collection is "Toy" → show ONLY pet toys (balls, tug toys, plush toys). Show a happy pet actively PLAYING with toys
+   - If the collection is "Snack" or "Treat" → show ONLY pet treats/snacks arranged beautifully. Show a happy pet EATING or excitedly looking at treats
+   - If the collection is "Accessories" → show ONLY accessories (harnesses, collars, beds). Show a pet wearing or using the accessory
+2. Include ONE happy pet (dog or cat) interacting with the products in a natural, joyful way
+3. The pet should be the emotional focal point — their happiness sells the category
+4. Do NOT include products from other categories. Stay 100% on-theme for "${collectionTitle}"
+5. Premium, clean aesthetic — bright lighting, warm tones, lifestyle photography feel
 
 ## OUTPUT FORMAT
 Generate a single cohesive prompt (2-3 sentences) describing:
-- The overall scene composition
-- The mood and atmosphere matching the collection theme
-- Relevant pet presence (based on UTM or collection context)
-- ${styleHint} aesthetic`;
+- The specific products shown (ONLY matching this collection category)
+- A happy pet interacting with these products
+- ${styleHint} aesthetic, warm and inviting`;
 
   try {
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Generate a collection hero image prompt for this ${context.season} ${context.timeOfDay} scene.` }
+        { role: 'user', content: `Generate a collection hero image prompt for the "${collectionTitle}" collection. Season: ${context.season}, time: ${context.timeOfDay}.` }
       ],
       max_tokens: 200,
-      temperature: 0.8,
+      temperature: 0.7,
     });
 
     return completion.choices[0]?.message?.content?.trim() || generateCollectionFallback(context);
@@ -435,7 +427,16 @@ Generate a single cohesive prompt (2-3 sentences) describing:
 }
 
 function generateCollectionFallback(context: UserContext): string {
-  const title = context.collectionTitle || 'premium pet products';
-  return `Elegant flat lay arrangement showcasing ${title} collection, with curious pet peeking into frame, ${context.season} ${context.timeOfDay} lighting, premium lifestyle photography`;
+  const title = (context.collectionTitle || 'pet products').toLowerCase();
+  if (title.includes('toy')) {
+    return `A joyful golden retriever puppy surrounded by colorful pet toys, playfully tugging a rope toy, bright warm studio lighting, premium pet product lifestyle photography`;
+  }
+  if (title.includes('snack') || title.includes('treat')) {
+    return `A happy dog sitting attentively next to an artful arrangement of premium pet treats and snacks, tongue out with excitement, warm natural lighting, clean premium product photography`;
+  }
+  if (title.includes('accessor')) {
+    return `A proud dog wearing a stylish harness with matching accessories neatly arranged beside it, confident pose, soft studio lighting, premium lifestyle pet photography`;
+  }
+  return `A happy pet interacting with ${title} products, warm inviting atmosphere, ${context.season} lighting, premium lifestyle pet product photography`;
 }
 

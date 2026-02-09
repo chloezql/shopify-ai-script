@@ -95,6 +95,30 @@ function setCache(key: string, config: PersonalizationConfig): void {
 }
 
 // =====================
+// Hash-based theme selection (deterministic, no LLM needed)
+// =====================
+
+function selectThemeByHash(req: PersonalizeRequest): number {
+    // Use campaign + content + term to deterministically select a theme
+    // Different campaigns ALWAYS get different themes (mod 9 → themes 1-9, theme 10 reserved for no-UTM)
+    const seed = [
+        req.utmCampaign || '',
+        req.utmContent || '',
+        req.utmTerm || '',
+    ].join('|');
+
+    if (!seed.replace(/\|/g, '')) return 10; // No campaign info → clean default
+
+    const hash = crypto.createHash('md5').update(seed).digest('hex');
+    // Take first 8 hex chars → number, mod 9 → 0-8, +1 → 1-9
+    const num = parseInt(hash.substring(0, 8), 16);
+    const theme = (num % 9) + 1;
+
+    console.log('[Personalize] Theme hash:', { seed: seed.substring(0, 60), hash: hash.substring(0, 8), theme });
+    return theme;
+}
+
+// =====================
 // OpenAI client
 // =====================
 
@@ -157,23 +181,17 @@ Best for: generic/direct traffic, unclear campaign intent, catch-all default, si
 // LLM Prompt
 // =====================
 
-const SYSTEM_PROMPT = `You are a landing page personalization engine for "The Pet Brand Kura", a pet e-commerce store selling beds, toys, treats, harnesses, and overall pet related items.
+const SYSTEM_PROMPT = `You are a landing page copy & product ordering engine for "The Pet Brand Kura", a pet e-commerce store selling beds, toys, treats, harnesses, and overall pet related items.
 
 Given UTM campaign parameters and the store's product catalog, you MUST:
-1. Choose the best visual THEME (1-10) for this visitor
-2. Order ALL products by relevance to the campaign
-3. Write personalized copy for multiple page sections
-4. Choose appropriate icons
+1. Order ALL products by relevance to the campaign
+2. Write personalized copy for multiple page sections
+3. Choose appropriate icons
 
-AVAILABLE THEMES:
-${THEME_DESCRIPTIONS}
+NOTE: Visual theme/layout is selected separately — you only handle copy, product order, and icons.
 
 AVAILABLE ICONS (Lucide names):
 ${AVAILABLE_ICONS.join(', ')}
-
-DECISION RULES:
-- THEME selection: Match the campaign's INTENT and AUDIENCE to the theme's "Best for" description. Two campaigns from the same platform but with different intents (e.g. "new_puppy_essentials" vs "active_dog_gear") MUST get different themes.
-- Consider these campaign dimensions: user stage (new vs returning), emotional tone (nurturing vs energetic vs premium), product focus (starter kit vs specific gear vs gifts), campaign goal (awareness vs conversion).
 
 COPY RULES:
 - All copy in English, warm/playful pet-lover tone
@@ -197,7 +215,6 @@ ICON RULES:
 
 Return ONLY valid JSON:
 {
-  "theme": 1,
   "productOrder": ["handle-1", "handle-2", ...],
   "copy": {
     "heroTitle": "...",
@@ -242,10 +259,13 @@ function buildUserPrompt(req: PersonalizeRequest): string {
 async function callLLM(req: PersonalizeRequest): Promise<PersonalizationConfig> {
     const client = getClient();
 
+    // Theme is selected by hash, not LLM
+    const theme = selectThemeByHash(req);
+
     const response = await client.chat.completions.create({
         model: 'gpt-4.1-mini',
-        temperature: 0.6,
-        max_tokens: 800,
+        temperature: 0.7,
+        max_tokens: 600,
         response_format: { type: 'json_object' },
         messages: [
             { role: 'system', content: SYSTEM_PROMPT },
@@ -259,10 +279,10 @@ async function callLLM(req: PersonalizeRequest): Promise<PersonalizationConfig> 
     }
 
     const parsed = JSON.parse(content);
-    return validateConfig(parsed, req.products || []);
+    return validateConfig(parsed, req.products || [], theme);
 }
 
-function validateConfig(raw: any, products: ProductInfo[]): PersonalizationConfig {
+function validateConfig(raw: any, products: ProductInfo[], theme: number = 10): PersonalizationConfig {
     const productHandles = products.map(p => p.handle);
 
     // Validate productOrder: must be valid handles
@@ -281,7 +301,7 @@ function validateConfig(raw: any, products: ProductInfo[]): PersonalizationConfi
     const validIcon = (name: any) => typeof name === 'string' && AVAILABLE_ICONS.includes(name);
 
     return {
-        theme: typeof raw.theme === 'number' && raw.theme >= 1 && raw.theme <= 10 ? raw.theme : 10,
+        theme, // Determined by hash, not LLM
         productOrder,
         copy: {
             heroTitle: typeof raw.copy?.heroTitle === 'string' ? raw.copy.heroTitle.slice(0, 60) : 'Pawsome Style for Your Fur Babies!',
@@ -317,6 +337,7 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
     const content = (req.utmContent || '').toLowerCase();
     const combined = campaign + ' ' + content;
     const productHandles = (req.products || []).map(p => p.handle);
+    const theme = selectThemeByHash(req);
 
     const isDog = /dog|puppy|pup|canine/.test(combined);
     const isCat = /cat|kitten|kitty|feline/.test(combined);
@@ -325,7 +346,7 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
         // Sort dog-tagged products first
         const sorted = sortHandlesByTags(req.products || [], ['dog']);
         return {
-            theme: 1,
+            theme,
             productOrder: sorted,
             copy: {
                 heroTitle: 'Pawsome Style for Your Pup!',
@@ -345,7 +366,7 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
     if (isCat) {
         const sorted = sortHandlesByTags(req.products || [], ['cat']);
         return {
-            theme: 1,
+            theme,
             productOrder: sorted,
             copy: {
                 heroTitle: 'Purrfect Style for Your Cat!',
@@ -363,7 +384,7 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
     }
 
     return {
-        theme: 10,
+        theme,
         productOrder: productHandles,
         copy: {
             heroTitle: 'Pawsome Style for Your Fur Babies!',
