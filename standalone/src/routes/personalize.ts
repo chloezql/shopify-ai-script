@@ -28,6 +28,8 @@ interface PersonalizationCopy {
     iwtBody: string;
     vibeBarText: string;
     trustItems: [string, string, string];
+    promoBannerText: string;
+    socialProofItems: [string, string, string];
 }
 
 interface PersonalizationConfig {
@@ -120,52 +122,78 @@ const AVAILABLE_ICONS = [
 // =====================
 
 const THEME_DESCRIPTIONS = `
-THEME 1 - "Bold Showcase": Products-first layout. 2-column large product grid, IWT flipped, card hover zoom effect, sticky Vibe Bar. Best for: product-focused campaigns, sales, new arrivals.
+THEME 1 - "Spotlight": Products→IWT→Collections. 2-column large grid with first card hero (spans 2 cols), card shadows, hover zoom, IWT flipped with overlap, sticky Vibe Bar, Promo Banner. DRAMATIC: big product photos, bold layout.
+Best for: product launches, new arrivals, specific product campaigns, sales events.
 
-THEME 2 - "Story First": IWT moved right after hero (story before products). 4-column grid, IWT flipped with image overlap effect, decorative section dividers. Best for: brand storytelling, emotional campaigns, lifestyle content.
+THEME 2 - "Story Arc": IWT→Products→Collections (story-first). 3-column grid, rounded cards with shadow, IWT flipped with overlap, warm background tint, spacious layout, section dividers, Social Proof Bar. DRAMATIC: brand story leads, emotional flow.
+Best for: brand storytelling, new pet parent onboarding, emotional/nurturing campaigns, starter kits, first-time buyers.
 
-THEME 3 - "Quick Shop": Products immediately after hero, then Collections, IWT last. 2-column grid, compact hero (half height), sticky Vibe Bar, card hover zoom. Best for: flash sales, promotions, urgency-driven campaigns.
+THEME 3 - "Flash Deal": Products→Collections→IWT (shop-first). 2-column grid, hover zoom + lift effect, sticky Vibe Bar, Promo Banner, compact spacing. DRAMATIC: urgency-focused, dense product display.
+Best for: flash sales, limited-time offers, promotions, discount campaigns, urgency/scarcity campaigns.
 
-THEME 4 - "Gallery": Standard section order. 2-column large grid, rounded product cards, parallax hero scrolling effect. Best for: visual/aesthetic campaigns, Instagram-style, curated collections.
+THEME 4 - "Gallery": Products→IWT→Collections (standard). 2-column grid, rounded cards with shadow, parallax hero, warm background, spacious layout, Category Pills navigation. DRAMATIC: curated visual gallery feel.
+Best for: visual/aesthetic campaigns, Instagram-style content, curated collections, lifestyle photography campaigns.
 
-THEME 5 - "Discovery": IWT first, then Collections, Products last (discovery journey). 4-column grid, IWT flipped, parallax hero, decorative dividers. Best for: new visitors, exploration-focused, broad audience campaigns.
+THEME 5 - "Discovery": Collections→IWT→Products (discovery journey). 3-column grid, IWT flipped, parallax hero, section dividers, Category Pills. DRAMATIC: exploration-focused, collections lead.
+Best for: new visitors, exploration campaigns, broad audience targeting, awareness campaigns, SEO/organic traffic.
 
-THEME 6 - "Premium": Standard order. 2-column grid, IWT image overlap effect, extra section spacing, parallax hero, card hover zoom. Best for: premium/luxury positioning, high-value products.
+THEME 6 - "Luxe": Products→IWT→Collections (standard). 2-column grid with first card hero, elegant card borders + shadow, IWT overlap, spacious layout, Social Proof Bar. DRAMATIC: premium white-space, refined.
+Best for: premium/luxury positioning, high-value products, gift campaigns, special occasions, quality-focused.
 
-THEME 7 - "Energetic": Standard order. 4-column grid, IWT flipped, compact hero, first product card enlarged spanning 2 columns, sticky Vibe Bar. Best for: energetic/playful campaigns, young audience, TikTok-style.
+THEME 7 - "Playful": Products→Collections→IWT (shop-first). 3-column grid with first card hero, rounded cards, hover zoom, IWT flipped, warm background, sticky Vibe Bar, Promo Banner. DRAMATIC: energetic, fun layout.
+Best for: active/outdoor campaigns, toys & play, young energetic audience, TikTok-style, fun/playful campaigns.
 
-THEME 8 - "Cozy Browse": IWT first then Products then Collections. 4-column grid, rounded cards, decorative dividers, extra spacing. Best for: relaxed browsing, comfort/cozy themed campaigns, returning customers.
+THEME 8 - "Cozy": IWT→Products→Collections (story-first). 3-column grid, rounded cards, warm background, spacious layout, section dividers, Social Proof Bar. DRAMATIC: warm, relaxed, homey feel.
+Best for: comfort products, beds & blankets, relaxation campaigns, returning customers, seasonal/holiday gifting.
 
-THEME 9 - "Impact": Products first, then Collections, IWT last. 2-column grid, IWT flipped with overlap, compact hero, first card enlarged, card hover zoom. Best for: high-impact product launches, bold campaigns, conversion-focused.
+THEME 9 - "Impact": Products→IWT→Collections (standard). 2-column grid with first card hero, card shadows + hover zoom + lift, IWT flipped with overlap, sticky Vibe Bar, Promo Banner, compact spacing. DRAMATIC: high-conversion, bold.
+Best for: conversion-focused campaigns, retargeting, high-intent audiences, performance marketing, best-seller pushes.
 
-THEME 10 - "Clean Default": Standard order. 4-column grid, subtle hover zoom only. Minimal changes, clean look. Best for: generic traffic, unclear campaign intent, direct visits.
+THEME 10 - "Clean": Products→IWT→Collections (standard). 3-column grid, subtle hover zoom only. Minimal visual changes, clean default look. Only Vibe Bar and Trust Block, no extra blocks.
+Best for: generic/direct traffic, unclear campaign intent, catch-all default, simple browsing.
 `;
 
 // =====================
 // LLM Prompt
 // =====================
 
-const SYSTEM_PROMPT = `You are a landing page personalization engine for "The Pet Brand Kura", a pet e-commerce store.
+const SYSTEM_PROMPT = `You are a landing page personalization engine for "The Pet Brand Kura", a pet e-commerce store selling beds, toys, treats, harnesses, and overall pet related items.
 
-Given UTM campaign parameters and the store's current product catalog, you must:
+Given UTM campaign parameters and the store's product catalog, you MUST:
 1. Choose the best visual THEME (1-10) for this visitor
-2. Order the products by relevance to the campaign (most relevant first)
-3. Write personalized copy
+2. Order ALL products by relevance to the campaign
+3. Write personalized copy for multiple page sections
 4. Choose appropriate icons
 
 AVAILABLE THEMES:
 ${THEME_DESCRIPTIONS}
 
-AVAILABLE ICONS (Lucide icon names):
+AVAILABLE ICONS (Lucide names):
 ${AVAILABLE_ICONS.join(', ')}
 
-RULES:
+DECISION RULES:
+- THEME selection: Match the campaign's INTENT and AUDIENCE to the theme's "Best for" description. Two campaigns from the same platform but with different intents (e.g. "new_puppy_essentials" vs "active_dog_gear") MUST get different themes.
+- Consider these campaign dimensions: user stage (new vs returning), emotional tone (nurturing vs energetic vs premium), product focus (starter kit vs specific gear vs gifts), campaign goal (awareness vs conversion).
+
+COPY RULES:
 - All copy in English, warm/playful pet-lover tone
-- Titles: SHORT and punchy (max 8 words)
+- heroTitle: punchy headline, max 8 words, reflects the campaign vibe
+- featuredTitle: product section heading, max 6 words
+- iwtTitle: "Image with Text" section heading, max 6 words
+- iwtBody: 1-2 sentences, warm and compelling, max 200 chars
+- vibeBarText: short tagline displayed below hero, max 60 chars
 - trustItems: exactly 3 items, max 4 words each
-- productOrder: return ALL product handles, sorted by campaign relevance (most relevant first). Think about what products match the campaign semantically — e.g. "outdoorsy active dog" campaign → harnesses and balls before beds and treats
-- vibeIcon + trustIcons: choose from the available Lucide icon names listed above
-- theme: pick the number (1-10) that best matches the campaign vibe and intent
+- promoBannerText: promotional/urgency text for golden banner, max 60 chars. Write something compelling like "Free Shipping on Orders $40+" or "New Puppy? Get 15% Off Starter Kits!"
+- socialProofItems: exactly 3 social proof stats, max 25 chars each. E.g. "10,000+ Happy Pets", "500+ Five-Star Reviews", "Vet Approved"
+
+PRODUCT ORDERING:
+- Return ALL product handles sorted by campaign relevance (most relevant first)
+- Think semantically: "active_dog_gear" → harnesses and toys first, beds last
+- Think about the audience: "new_puppy_parents" → starter essentials (bed, treats) first
+
+ICON RULES:
+- vibeIcon + trustIcons: choose from available Lucide icon names above
+- Match icons to the campaign theme (e.g. heart for nurturing, zap for energetic)
 
 Return ONLY valid JSON:
 {
@@ -177,7 +205,9 @@ Return ONLY valid JSON:
     "iwtTitle": "...",
     "iwtBody": "...",
     "vibeBarText": "...",
-    "trustItems": ["...", "...", "..."]
+    "trustItems": ["...", "...", "..."],
+    "promoBannerText": "...",
+    "socialProofItems": ["...", "...", "..."]
   },
   "vibeIcon": "paw-print",
   "trustIcons": ["shield-check", "truck", "leaf"]
@@ -262,6 +292,10 @@ function validateConfig(raw: any, products: ProductInfo[]): PersonalizationConfi
             trustItems: Array.isArray(raw.copy?.trustItems) && raw.copy.trustItems.length >= 3
                 ? [String(raw.copy.trustItems[0]).slice(0, 30), String(raw.copy.trustItems[1]).slice(0, 30), String(raw.copy.trustItems[2]).slice(0, 30)]
                 : ['Pet-Safe Materials', 'Free Shipping', '100% Natural'],
+            promoBannerText: typeof raw.copy?.promoBannerText === 'string' ? raw.copy.promoBannerText.slice(0, 80) : 'Free Shipping on Orders Over $40!',
+            socialProofItems: Array.isArray(raw.copy?.socialProofItems) && raw.copy.socialProofItems.length >= 3
+                ? [String(raw.copy.socialProofItems[0]).slice(0, 40), String(raw.copy.socialProofItems[1]).slice(0, 40), String(raw.copy.socialProofItems[2]).slice(0, 40)]
+                : ['10,000+ Happy Pets', '500+ Five-Star Reviews', 'Vet Approved'],
         },
         vibeIcon: validIcon(raw.vibeIcon) ? raw.vibeIcon : 'paw-print',
         trustIcons: Array.isArray(raw.trustIcons) && raw.trustIcons.length >= 3
@@ -300,6 +334,8 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
                 iwtBody: 'Try our toy subscription so you can keep your furry friend happy and surprised!',
                 vibeBarText: 'Curated for Dog Lovers',
                 trustItems: ['Vet Approved', 'Durable & Safe', '100% Natural'],
+                promoBannerText: 'Free Shipping on Dog Essentials!',
+                socialProofItems: ['10,000+ Happy Dogs', '500+ Five-Star Reviews', 'Vet Approved'],
             },
             vibeIcon: 'heart',
             trustIcons: ['shield-check', 'award', 'leaf'],
@@ -318,6 +354,8 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
                 iwtBody: 'Try our toy subscription so you can keep your feline friend happy and surprised!',
                 vibeBarText: 'Curated for Cat Parents',
                 trustItems: ['Cat-Safe Materials', 'Purr-fect Quality', '100% Natural'],
+                promoBannerText: 'Free Shipping on Cat Essentials!',
+                socialProofItems: ['10,000+ Happy Cats', '500+ Five-Star Reviews', 'Vet Approved'],
             },
             vibeIcon: 'heart',
             trustIcons: ['shield-check', 'star', 'leaf'],
@@ -334,6 +372,8 @@ function buildFallbackConfig(req: PersonalizeRequest): PersonalizationConfig {
             iwtBody: 'Try our toy subscription so you can keep your fur baby happy and surprised!',
             vibeBarText: 'Welcome to The Pet Brand',
             trustItems: ['Pet-Safe Materials', 'Free Shipping', '100% Natural'],
+            promoBannerText: 'Free Shipping on Orders Over $40!',
+            socialProofItems: ['10,000+ Happy Pets', '500+ Five-Star Reviews', 'Vet Approved'],
         },
         vibeIcon: 'paw-print',
         trustIcons: ['shield-check', 'truck', 'leaf'],

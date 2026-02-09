@@ -531,14 +531,69 @@
         display: none !important;
     }
     
-    /* --- Grid 2-column --- */
+    /* --- Grid 2-column (override Dawn slider flex → grid) --- */
     .ai-lp-grid-2col {
+        display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
+        overflow-x: visible !important;
+        scroll-snap-type: none !important;
+        gap: 16px !important;
+        padding: 0 1.5rem !important;
+    }
+    .ai-lp-grid-2col > .slider__slide,
+    .ai-lp-grid-2col > .grid__item {
+        scroll-snap-align: unset !important;
+        width: auto !important;
+        min-width: 0 !important;
+        flex: none !important;
+    }
+    /* Hide slider navigation when in grid mode */
+    slider-component:has(.ai-lp-grid-2col) .slider-buttons,
+    slider-component:has(.ai-lp-grid-2col) .slider-counter {
+        display: none !important;
     }
     @media (max-width: 749px) {
         .ai-lp-grid-2col {
             grid-template-columns: repeat(1, 1fr) !important;
+            padding: 0 1rem !important;
         }
+    }
+    
+    /* --- Grid 3-column (override Dawn slider flex → grid, keep 3 cols) --- */
+    .ai-lp-grid-3col {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        overflow-x: visible !important;
+        scroll-snap-type: none !important;
+        gap: 16px !important;
+        padding: 0 1.5rem !important;
+    }
+    .ai-lp-grid-3col > .slider__slide,
+    .ai-lp-grid-3col > .grid__item {
+        scroll-snap-align: unset !important;
+        width: auto !important;
+        min-width: 0 !important;
+        flex: none !important;
+    }
+    slider-component:has(.ai-lp-grid-3col) .slider-buttons,
+    slider-component:has(.ai-lp-grid-3col) .slider-counter {
+        display: none !important;
+    }
+    @media (max-width: 989px) {
+        .ai-lp-grid-3col {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+    @media (max-width: 749px) {
+        .ai-lp-grid-3col {
+            grid-template-columns: repeat(1, 1fr) !important;
+            padding: 0 1rem !important;
+        }
+    }
+    
+    /* --- Fix: product grid default slider padding --- */
+    .slider-component.page-width > .product-grid {
+        padding-left: 0.5rem;
     }
     
     /* --- IWT flip (direction trick) --- */
@@ -576,23 +631,6 @@
     }
     .ai-lp-rounded .card__media img {
         border-radius: 20px !important;
-    }
-    
-    /* --- Compact hero (half height) --- */
-    .ai-lp-hero-compact .banner,
-    .ai-lp-hero-compact .slideshow,
-    .ai-lp-hero-compact .hero {
-        max-height: 320px !important;
-        min-height: 200px !important;
-        overflow: hidden !important;
-    }
-    @media (max-width: 749px) {
-        .ai-lp-hero-compact .banner,
-        .ai-lp-hero-compact .slideshow,
-        .ai-lp-hero-compact .hero {
-            max-height: 220px !important;
-            min-height: 150px !important;
-        }
     }
     
     /* --- Parallax hero --- */
@@ -741,6 +779,170 @@
         .ai-lp-trust-item__text { font-size: 12px; }
         .ai-lp-vibe-bar__text { font-size: 13px; }
         .ai-lp-vibe-bar__icon svg { width: 18px; height: 18px; }
+    }
+    
+    /* ===================== */
+    /* New Visual Effects    */
+    /* ===================== */
+    
+    /* --- Card shadow --- */
+    .ai-lp-card-shadow .card-wrapper .card,
+    .ai-lp-card-shadow .card--standard {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+        transition: box-shadow 0.3s ease !important;
+    }
+    
+    /* --- Card border (elegant) --- */
+    .ai-lp-card-border .card-wrapper .card,
+    .ai-lp-card-border .card--standard {
+        border: 1px solid #E8E0D4 !important;
+    }
+    
+    /* --- Hover lift (card floats up on hover) --- */
+    .ai-lp-hover-lift .card-wrapper {
+        transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    .ai-lp-hover-lift .card-wrapper:hover {
+        transform: translateY(-8px) !important;
+    }
+    .ai-lp-hover-lift .card-wrapper:hover .card {
+        box-shadow: 0 12px 30px rgba(0,0,0,0.12) !important;
+    }
+    
+    /* --- Warm section background --- */
+    .ai-lp-warm-bg {
+        background: linear-gradient(180deg, #FFFCF8 0%, #FFF9F0 100%) !important;
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+    }
+    
+    /* --- Compact spacing --- */
+    .ai-lp-compact > .shopify-section {
+        margin-bottom: 8px !important;
+    }
+    .ai-lp-compact > [data-ai-lp-vibe-bar],
+    .ai-lp-compact > [data-ai-lp-trust-block],
+    .ai-lp-compact > [data-ai-lp-promo-banner],
+    .ai-lp-compact > [data-ai-lp-social-proof] {
+        margin-bottom: 0 !important;
+    }
+    
+    /* --- Extra spacious --- */
+    .ai-lp-spacious > .shopify-section {
+        margin-bottom: 48px !important;
+    }
+    
+    /* ===================== */
+    /* New Injectable Blocks */
+    /* ===================== */
+    
+    /* --- Promo Banner --- */
+    .ai-lp-promo-banner {
+        width: 100%;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, #96640F 0%, #B8860B 50%, #96640F 100%);
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    .ai-lp-promo-banner__icon {
+        display: flex;
+        align-items: center;
+    }
+    .ai-lp-promo-banner__icon svg {
+        width: 20px;
+        height: 20px;
+        color: #FFFFFF;
+    }
+    .ai-lp-promo-banner__text {
+        font-size: 15px;
+        font-weight: 700;
+        color: #FFFFFF;
+        letter-spacing: 0.04em;
+    }
+    @media (max-width: 749px) {
+        .ai-lp-promo-banner__text { font-size: 13px; }
+        .ai-lp-promo-banner { padding: 12px 16px; }
+    }
+    
+    /* --- Social Proof Bar --- */
+    .ai-lp-social-proof {
+        width: 100%;
+        padding: 18px 24px;
+        background: #FFFCF7;
+        border-top: 1px solid rgba(150, 100, 15, 0.08);
+        border-bottom: 1px solid rgba(150, 100, 15, 0.08);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 32px;
+        flex-wrap: wrap;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        box-sizing: border-box;
+    }
+    .ai-lp-social-proof__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #5C3D0E;
+        white-space: nowrap;
+    }
+    .ai-lp-social-proof__item svg {
+        width: 18px;
+        height: 18px;
+        color: #96640F;
+    }
+    .ai-lp-social-proof__separator {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #D4C5B0;
+        flex-shrink: 0;
+    }
+    @media (max-width: 749px) {
+        .ai-lp-social-proof { gap: 12px; padding: 14px 16px; }
+        .ai-lp-social-proof__item { font-size: 12px; }
+        .ai-lp-social-proof__separator { display: none; }
+    }
+    
+    /* --- Category Pills --- */
+    .ai-lp-category-pills {
+        width: 100%;
+        padding: 16px 24px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        box-sizing: border-box;
+    }
+    .ai-lp-category-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 20px;
+        border: 2px solid #96640F;
+        border-radius: 24px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #5C3D0E;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        background: transparent;
+        cursor: pointer;
+    }
+    .ai-lp-category-pill:hover {
+        background: #96640F;
+        color: #FFFFFF;
+    }
+    @media (max-width: 749px) {
+        .ai-lp-category-pills { gap: 8px; padding: 12px 16px; }
+        .ai-lp-category-pill { padding: 6px 16px; font-size: 12px; }
     }
 `;
     document.head.appendChild(style);
@@ -1785,20 +1987,67 @@
         return LUCIDE_ICONS[name] || LUCIDE_ICONS['paw-print'];
     }
 
-    // --- 10 Theme definitions ---
-    // Each theme: { sectionOrder, grid2col, flipIWT, hoverZoom, rounded, heroCompact, parallax, iwtOverlap, spacing, featuredHero, stickyVibe, dividers }
+    // --- 10 Theme definitions (maximally different combinations) ---
+    // gridCols: 2 or 3 (forces grid mode, overrides Dawn slider)
+    // sectionOrder: arrangement of products/iwt/collections AFTER hero
+    // Card effects: cardShadow, cardBorder, hoverZoom, hoverLift, rounded
+    // IWT: flipIWT, iwtOverlap
+    // Hero: parallax
+    // Layout: featuredHero (first card spans 2 cols), spacing ('compact'|'spacious'|null)
+    // Injected: stickyVibe, dividers, promoBanner, socialProof, categoryPills
+    // Background: warmBg (warm tint on product section)
 
     var THEMES = {
-        1:  { name: 'Bold Showcase',   sectionOrder: ['products','iwt','collections'], grid2col: true,  flipIWT: true,  hoverZoom: true,  rounded: false, heroCompact: false, parallax: false, iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: true,  dividers: false },
-        2:  { name: 'Story First',     sectionOrder: ['iwt','products','collections'], grid2col: false, flipIWT: true,  hoverZoom: false, rounded: false, heroCompact: false, parallax: false, iwtOverlap: true,  spacing: false, featuredHero: false, stickyVibe: false, dividers: true  },
-        3:  { name: 'Quick Shop',      sectionOrder: ['products','collections','iwt'], grid2col: true,  flipIWT: false, hoverZoom: true,  rounded: false, heroCompact: true,  parallax: false, iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: true,  dividers: false },
-        4:  { name: 'Gallery',         sectionOrder: ['products','iwt','collections'], grid2col: true,  flipIWT: false, hoverZoom: false, rounded: true,  heroCompact: false, parallax: true,  iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: false, dividers: false },
-        5:  { name: 'Discovery',       sectionOrder: ['iwt','collections','products'], grid2col: false, flipIWT: true,  hoverZoom: false, rounded: false, heroCompact: false, parallax: true,  iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: false, dividers: true  },
-        6:  { name: 'Premium',         sectionOrder: ['products','iwt','collections'], grid2col: true,  flipIWT: false, hoverZoom: true,  rounded: false, heroCompact: false, parallax: true,  iwtOverlap: true,  spacing: true,  featuredHero: false, stickyVibe: false, dividers: false },
-        7:  { name: 'Energetic',       sectionOrder: ['products','iwt','collections'], grid2col: false, flipIWT: true,  hoverZoom: false, rounded: false, heroCompact: true,  parallax: false, iwtOverlap: false, spacing: false, featuredHero: true,  stickyVibe: true,  dividers: false },
-        8:  { name: 'Cozy Browse',     sectionOrder: ['iwt','products','collections'], grid2col: false, flipIWT: false, hoverZoom: false, rounded: true,  heroCompact: false, parallax: false, iwtOverlap: false, spacing: true,  featuredHero: false, stickyVibe: false, dividers: true  },
-        9:  { name: 'Impact',          sectionOrder: ['products','collections','iwt'], grid2col: true,  flipIWT: true,  hoverZoom: true,  rounded: false, heroCompact: true,  parallax: false, iwtOverlap: true,  spacing: false, featuredHero: true,  stickyVibe: false, dividers: false },
-        10: { name: 'Clean Default',   sectionOrder: ['products','iwt','collections'], grid2col: false, flipIWT: false, hoverZoom: true,  rounded: false, heroCompact: false, parallax: false, iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: false, dividers: false },
+        1:  { name: 'Spotlight',
+              sectionOrder: ['products','iwt','collections'], gridCols: 2, featuredHero: true,
+              cardShadow: true, cardBorder: false, hoverZoom: true, hoverLift: false, rounded: false,
+              flipIWT: true, iwtOverlap: true, parallax: false, warmBg: false, spacing: null,
+              stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
+        2:  { name: 'Story Arc',
+              sectionOrder: ['iwt','products','collections'], gridCols: 3, featuredHero: false,
+              cardShadow: true, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: true,
+              flipIWT: true, iwtOverlap: true, parallax: false, warmBg: true, spacing: 'spacious',
+              stickyVibe: false, dividers: true, promoBanner: false, socialProof: true, categoryPills: false },
+        3:  { name: 'Flash Deal',
+              sectionOrder: ['products','collections','iwt'], gridCols: 2, featuredHero: false,
+              cardShadow: false, cardBorder: false, hoverZoom: true, hoverLift: true, rounded: false,
+              flipIWT: false, iwtOverlap: false, parallax: false, warmBg: false, spacing: 'compact',
+              stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
+        4:  { name: 'Gallery',
+              sectionOrder: ['products','iwt','collections'], gridCols: 2, featuredHero: false,
+              cardShadow: true, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: true,
+              flipIWT: false, iwtOverlap: false, parallax: true, warmBg: true, spacing: 'spacious',
+              stickyVibe: false, dividers: false, promoBanner: false, socialProof: false, categoryPills: true },
+        5:  { name: 'Discovery',
+              sectionOrder: ['collections','iwt','products'], gridCols: 3, featuredHero: false,
+              cardShadow: false, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: false,
+              flipIWT: true, iwtOverlap: false, parallax: true, warmBg: false, spacing: null,
+              stickyVibe: false, dividers: true, promoBanner: false, socialProof: false, categoryPills: true },
+        6:  { name: 'Luxe',
+              sectionOrder: ['products','iwt','collections'], gridCols: 2, featuredHero: true,
+              cardShadow: true, cardBorder: true, hoverZoom: false, hoverLift: false, rounded: false,
+              flipIWT: false, iwtOverlap: true, parallax: false, warmBg: false, spacing: 'spacious',
+              stickyVibe: false, dividers: false, promoBanner: false, socialProof: true, categoryPills: false },
+        7:  { name: 'Playful',
+              sectionOrder: ['products','collections','iwt'], gridCols: 3, featuredHero: true,
+              cardShadow: false, cardBorder: false, hoverZoom: true, hoverLift: false, rounded: true,
+              flipIWT: true, iwtOverlap: false, parallax: false, warmBg: true, spacing: null,
+              stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
+        8:  { name: 'Cozy',
+              sectionOrder: ['iwt','products','collections'], gridCols: 3, featuredHero: false,
+              cardShadow: false, cardBorder: false, hoverZoom: false, hoverLift: false, rounded: true,
+              flipIWT: false, iwtOverlap: false, parallax: false, warmBg: true, spacing: 'spacious',
+              stickyVibe: false, dividers: true, promoBanner: false, socialProof: true, categoryPills: false },
+        9:  { name: 'Impact',
+              sectionOrder: ['products','iwt','collections'], gridCols: 2, featuredHero: true,
+              cardShadow: true, cardBorder: false, hoverZoom: true, hoverLift: true, rounded: false,
+              flipIWT: true, iwtOverlap: true, parallax: false, warmBg: false, spacing: 'compact',
+              stickyVibe: true, dividers: false, promoBanner: true, socialProof: false, categoryPills: false },
+        10: { name: 'Clean',
+              sectionOrder: ['products','iwt','collections'], gridCols: 3, featuredHero: false,
+              cardShadow: false, cardBorder: false, hoverZoom: true, hoverLift: false, rounded: false,
+              flipIWT: false, iwtOverlap: false, parallax: false, warmBg: false, spacing: null,
+              stickyVibe: false, dividers: false, promoBanner: false, socialProof: false, categoryPills: false },
     };
 
     // --- LLM 个性化预加载 ---
@@ -2017,16 +2266,19 @@
         var sections = main.querySelectorAll('.shopify-section, section');
         for (var i = 0; i < sections.length; i++) {
             var id = (sections[i].id || '').toLowerCase();
+            var cls = (sections[i].className || '').toLowerCase();
             // 也检查 section 内部的 class 和内容
-            var inner = sections[i].innerHTML.substring(0, 500).toLowerCase();
+            var inner = sections[i].innerHTML.substring(0, 800).toLowerCase();
             for (var j = 0; j < patterns.length; j++) {
                 var p = patterns[j];
+                // 直接 ID 匹配
                 if (id.includes(p)) return sections[i];
-                // 兜底：检查 section 内部是否有匹配 class 的元素
-                if (p === 'image_with_text' && (inner.includes('image-with-text') || sections[i].querySelector('.image-with-text'))) return sections[i];
-                if (p === 'featured' && (inner.includes('featured') || sections[i].querySelector('[class*="collection"]'))) {
-                    // 排除 collection_list
-                    if (!id.includes('collection_list')) return sections[i];
+                // 兜底：检查 section 自身 class 和内部元素
+                if (p === 'image_with_text' && (inner.includes('image-with-text') || cls.includes('image-with-text') || sections[i].querySelector('.image-with-text'))) return sections[i];
+                if (p === 'collection_list' && (inner.includes('collection-list') || cls.includes('collection-list') || sections[i].querySelector('.collection-list-wrapper, .collection-list'))) return sections[i];
+                if (p === 'featured' && (inner.includes('featured') || sections[i].querySelector('.product-grid'))) {
+                    // 排除 collection_list section
+                    if (!id.includes('collection_list') && !cls.includes('collection-list') && !sections[i].querySelector('.collection-list-wrapper')) return sections[i];
                 }
             }
         }
@@ -2123,6 +2375,107 @@
         } catch (err) { log('[AI-LP] Dividers error:', err); }
     }
 
+    // --- Promo Banner ---
+
+    function injectPromoBanner(config) {
+        try {
+            if (document.querySelector('[data-ai-lp-promo-banner]')) return;
+            if (!config || !config.copy || !config.copy.promoBannerText) return;
+
+            // Insert after vibe bar, or after hero
+            var anchor = document.querySelector('[data-ai-lp-vibe-bar]');
+            if (!anchor) anchor = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
+            if (!anchor) return;
+
+            var banner = document.createElement('div');
+            banner.className = 'ai-lp-promo-banner';
+            banner.setAttribute('data-ai-lp-promo-banner', 'true');
+            banner.innerHTML = '<span class="ai-lp-promo-banner__icon">' + getIcon('zap') + '</span>' +
+                               '<span class="ai-lp-promo-banner__text">' + config.copy.promoBannerText + '</span>';
+            anchor.parentElement.insertBefore(banner, anchor.nextSibling);
+            log('[AI-LP] Promo Banner injected');
+        } catch (err) { log('[AI-LP] Promo Banner error:', err); }
+    }
+
+    // --- Social Proof Bar ---
+
+    function injectSocialProofBar(config) {
+        try {
+            if (document.querySelector('[data-ai-lp-social-proof]')) return;
+            if (!config || !config.copy || !config.copy.socialProofItems || config.copy.socialProofItems.length < 3) return;
+
+            // Insert after trust block, or after products section
+            var anchor = document.querySelector('[data-ai-lp-trust-block]');
+            if (!anchor) {
+                var productsSection = findSectionByPattern(['featured']);
+                if (productsSection) anchor = productsSection;
+            }
+            if (!anchor) return;
+
+            var items = config.copy.socialProofItems;
+            var proofIcons = ['star', 'heart', 'award'];
+            var bar = document.createElement('div');
+            bar.className = 'ai-lp-social-proof';
+            bar.setAttribute('data-ai-lp-social-proof', 'true');
+            for (var i = 0; i < 3 && i < items.length; i++) {
+                if (i > 0) bar.innerHTML += '<span class="ai-lp-social-proof__separator"></span>';
+                bar.innerHTML += '<span class="ai-lp-social-proof__item">' + getIcon(proofIcons[i]) + ' ' + items[i] + '</span>';
+            }
+            anchor.parentElement.insertBefore(bar, anchor.nextSibling);
+            log('[AI-LP] Social Proof Bar injected');
+        } catch (err) { log('[AI-LP] Social Proof Bar error:', err); }
+    }
+
+    // --- Category Pills ---
+
+    function injectCategoryPills() {
+        try {
+            if (document.querySelector('[data-ai-lp-category-pills]')) return;
+
+            // Extract collection links from the Collection List section
+            var collectionsSection = findSectionByPattern(['collection_list']);
+            if (!collectionsSection) return;
+
+            var collectionLinks = collectionsSection.querySelectorAll('a[href*="/collections/"]');
+            if (collectionLinks.length === 0) return;
+
+            // Deduplicate by href
+            var seen = {};
+            var links = [];
+            collectionLinks.forEach(function (a) {
+                var href = a.getAttribute('href');
+                if (href && !seen[href]) {
+                    seen[href] = true;
+                    // Try to get the collection title
+                    var titleEl = a.querySelector('.card__heading, .collection-list__heading, h3, h2, .card-information__text');
+                    var title = titleEl ? titleEl.textContent.trim() : '';
+                    if (!title) {
+                        // Fallback: extract from href
+                        var match = href.match(/\/collections\/([^?#\/]+)/);
+                        title = match ? match[1].replace(/-/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); }) : '';
+                    }
+                    if (title) links.push({ href: href, title: title });
+                }
+            });
+
+            if (links.length === 0) return;
+
+            // Insert after hero or vibe bar
+            var anchor = document.querySelector('[data-ai-lp-promo-banner]') || document.querySelector('[data-ai-lp-vibe-bar]');
+            if (!anchor) anchor = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
+            if (!anchor) return;
+
+            var pills = document.createElement('div');
+            pills.className = 'ai-lp-category-pills';
+            pills.setAttribute('data-ai-lp-category-pills', 'true');
+            links.forEach(function (link) {
+                pills.innerHTML += '<a class="ai-lp-category-pill" href="' + link.href + '">' + link.title + '</a>';
+            });
+            anchor.parentElement.insertBefore(pills, anchor.nextSibling);
+            log('[AI-LP] Category Pills injected:', links.map(function (l) { return l.title; }).join(', '));
+        } catch (err) { log('[AI-LP] Category Pills error:', err); }
+    }
+
     // --- 文案替换（保持字号） ---
 
     function setTextSafe(section, selector, text) {
@@ -2193,67 +2546,69 @@
         var theme = THEMES[themeNum] || THEMES[10];
         log('[AI-LP] Applying theme', themeNum, '(' + theme.name + ')');
 
-        // 文案
+        var mainEl = document.querySelector('#MainContent, main, [role="main"]');
+        var productsSection = container ? (container.closest('.shopify-section') || container.parentElement) : null;
+
+        // === 文案 ===
         applyTextFromConfig(config);
 
-        // Vibe Bar（所有 theme 都有）
+        // === Injected Blocks (order matters: vibe → promo → pills → trust → social proof → dividers) ===
         injectVibeBar(config, theme.stickyVibe);
+        if (theme.promoBanner) injectPromoBanner(config);
+        if (theme.categoryPills) injectCategoryPills();
 
-        // Trust Block（所有 theme 都有）
         injectTrustBlock(config);
+        if (theme.socialProof) injectSocialProofBar(config);
 
-        // Section 重排序
+        // === Section 重排序 ===
         reorderSections(theme.sectionOrder);
 
-        // Grid layout
-        if (theme.grid2col && container) container.classList.add('ai-lp-grid-2col');
-
-        // IWT flip
-        if (theme.flipIWT) {
-            var iwt = findSectionByPattern(['image_with_text']);
-            if (iwt) iwt.classList.add('ai-lp-iwt-flip');
+        // === Grid layout ===
+        if (container) {
+            if (theme.gridCols === 2) {
+                container.classList.add('ai-lp-grid-2col');
+            } else if (theme.gridCols === 3) {
+                container.classList.add('ai-lp-grid-3col');
+            }
+            // Hide slider buttons via JS fallback (for browsers without :has() support)
+            var sliderComponent = container.closest('slider-component');
+            if (sliderComponent && (theme.gridCols === 2 || theme.gridCols === 3)) {
+                var sliderBtns = sliderComponent.querySelector('.slider-buttons');
+                var sliderCounter = sliderComponent.querySelector('.slider-counter');
+                if (sliderBtns) sliderBtns.style.display = 'none';
+                if (sliderCounter) sliderCounter.style.display = 'none';
+            }
         }
 
-        // IWT overlap
-        if (theme.iwtOverlap) {
-            var iwtOv = findSectionByPattern(['image_with_text']);
-            if (iwtOv) iwtOv.classList.add('ai-lp-iwt-overlap');
-        }
+        // === Featured hero card (first card spans 2 cols) ===
+        if (theme.featuredHero && container) container.classList.add('ai-lp-featured-hero');
 
-        // Hover zoom
-        if (theme.hoverZoom && container) {
-            var gridParent = container.closest('.shopify-section') || container.parentElement;
-            if (gridParent) gridParent.classList.add('ai-lp-hover-zoom');
-        }
+        // === Card effects ===
+        if (theme.cardShadow && productsSection) productsSection.classList.add('ai-lp-card-shadow');
+        if (theme.cardBorder && productsSection) productsSection.classList.add('ai-lp-card-border');
+        if (theme.hoverZoom && productsSection) productsSection.classList.add('ai-lp-hover-zoom');
+        if (theme.hoverLift && productsSection) productsSection.classList.add('ai-lp-hover-lift');
+        if (theme.rounded && productsSection) productsSection.classList.add('ai-lp-rounded');
 
-        // Rounded cards
-        if (theme.rounded && container) {
-            var roundParent = container.closest('.shopify-section') || container.parentElement;
-            if (roundParent) roundParent.classList.add('ai-lp-rounded');
-        }
+        // === IWT effects ===
+        var iwtSection = findSectionByPattern(['image_with_text']);
+        if (theme.flipIWT && iwtSection) iwtSection.classList.add('ai-lp-iwt-flip');
+        if (theme.iwtOverlap && iwtSection) iwtSection.classList.add('ai-lp-iwt-overlap');
 
-        // Compact hero
-        if (theme.heroCompact) {
-            var heroSec = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
-            if (heroSec) heroSec.classList.add('ai-lp-hero-compact');
-        }
-
-        // Parallax
+        // === Hero effects ===
         if (theme.parallax) {
             var heroPar = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
             if (heroPar) { heroPar.classList.add('ai-lp-parallax'); initParallax(); }
         }
 
-        // Extra spacing
-        if (theme.spacing) {
-            var mainEl = document.querySelector('#MainContent, main, [role="main"]');
-            if (mainEl) mainEl.classList.add('ai-lp-spacing');
-        }
+        // === Warm background on products section ===
+        if (theme.warmBg && productsSection) productsSection.classList.add('ai-lp-warm-bg');
 
-        // Featured hero card (first card enlarged)
-        if (theme.featuredHero && container) container.classList.add('ai-lp-featured-hero');
+        // === Spacing ===
+        if (theme.spacing === 'compact' && mainEl) mainEl.classList.add('ai-lp-compact');
+        if (theme.spacing === 'spacious' && mainEl) mainEl.classList.add('ai-lp-spacious');
 
-        // Section dividers
+        // === Section dividers ===
         if (theme.dividers) injectDividers();
 
         log('[AI-LP] Theme', themeNum, 'applied successfully');
@@ -2263,17 +2618,26 @@
 
     function cleanupInjectedElements() {
         try {
-            // Remove injected elements
-            document.querySelectorAll('[data-ai-lp-vibe-bar],[data-ai-lp-trust-block],[data-ai-lp-divider]').forEach(function (el) { el.remove(); });
+            // Remove all injected elements
+            document.querySelectorAll('[data-ai-lp-vibe-bar],[data-ai-lp-trust-block],[data-ai-lp-divider],[data-ai-lp-promo-banner],[data-ai-lp-social-proof],[data-ai-lp-category-pills]').forEach(function (el) { el.remove(); });
             // Restore text
             document.querySelectorAll('[data-ai-original-text]').forEach(function (el) {
                 el.textContent = el.dataset.aiOriginalText;
                 el.removeAttribute('data-ai-original-text');
             });
             // Remove all theme CSS classes
-            var themeClasses = ['ai-lp-iwt-flip','ai-lp-iwt-overlap','ai-lp-grid-2col','ai-lp-hover-zoom','ai-lp-rounded','ai-lp-hero-compact','ai-lp-parallax','ai-lp-spacing','ai-lp-featured-hero'];
+            var themeClasses = [
+                'ai-lp-iwt-flip','ai-lp-iwt-overlap','ai-lp-grid-2col','ai-lp-grid-3col',
+                'ai-lp-hover-zoom','ai-lp-hover-lift','ai-lp-rounded','ai-lp-parallax',
+                'ai-lp-featured-hero','ai-lp-card-shadow','ai-lp-card-border',
+                'ai-lp-warm-bg','ai-lp-compact','ai-lp-spacious','ai-lp-spacing'
+            ];
             themeClasses.forEach(function (cls) {
                 document.querySelectorAll('.' + cls).forEach(function (el) { el.classList.remove(cls); });
+            });
+            // Restore slider buttons that might have been hidden via JS
+            document.querySelectorAll('slider-component .slider-buttons, slider-component .slider-counter').forEach(function (el) {
+                el.style.display = '';
             });
         } catch (err) { /* ignore */ }
     }
