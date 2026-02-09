@@ -2007,7 +2007,13 @@
             var path = window.location.pathname;
             if (path !== '/' && path !== '') return;
 
-            var cards = findProductCards();
+            var allCards = findProductCards();
+            // ★ 只保留真正链接到 /products/ 的卡片
+            // 排除 Collection 卡片（链接到 /collections/）和其他非产品卡片
+            // 避免把 Collection 区块误移到 Featured Products 容器中
+            var cards = allCards.filter(function (card) {
+                return getProductHandleFromCard(card) !== null;
+            });
             if (!cards || cards.length === 0) return;
 
             var container = findCardsContainer(cards);
