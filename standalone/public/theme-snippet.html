@@ -1,22 +1,5 @@
 <!-- 
-  AI Visual Generator v2 - 首页预加载 + 第二张图替换
-  
-  使用方法：
-  1. 复制下面的 <script> 标签内容
-  2. 粘贴到 Shopify 主题的 theme.liquid 文件中，放在 </body> 之前
-  3. 根据你的主题调整 productCardSelector 选择器
-  
-  功能特点：
-  - 在首页/集合页就开始预加载 AI 生成图片
-  - 产品卡片：替换第二张图（hover 显示 AI 图）
-  - 产品详情页：替换第二张大图
-  - Banner/Hero 图片替换
-  - Collection 图片替换（利用 collection 元数据）
-  - Image with Text 图片替换
-  - Landing Page 个性化引擎（LLM 驱动）
-  - 跨页面 sessionStorage 缓存
-  - UTM 参数持久化（跨页面保留 UTM）
-  - 并发控制、graceful degradation
+  AI Visual Generator v2 - Theme-Based LLM Personalization
   
   与 embed.js 完全同步
 -->
@@ -554,18 +537,17 @@
         display: none !important;
     }
     
-    /* Grid 2-column layout override */
+    /* --- Grid 2-column --- */
     .ai-lp-grid-2col {
         grid-template-columns: repeat(2, 1fr) !important;
     }
-    
     @media (max-width: 749px) {
         .ai-lp-grid-2col {
             grid-template-columns: repeat(1, 1fr) !important;
         }
     }
     
-    /* Image-with-text flip */
+    /* --- IWT flip (direction trick) --- */
     .ai-lp-iwt-flip .image-with-text,
     .ai-lp-iwt-flip .image-with-text__grid,
     .ai-lp-iwt-flip > .grid,
@@ -579,7 +561,117 @@
         direction: ltr;
     }
     
-    /* Vibe Bar */
+    /* --- Card hover zoom --- */
+    .ai-lp-hover-zoom .card__media img,
+    .ai-lp-hover-zoom .card-wrapper img,
+    .ai-lp-hover-zoom .card--standard img {
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    }
+    .ai-lp-hover-zoom .card__media:hover img,
+    .ai-lp-hover-zoom .card-wrapper:hover img,
+    .ai-lp-hover-zoom .card--standard:hover img {
+        transform: scale(1.06) !important;
+    }
+    
+    /* --- Rounded cards --- */
+    .ai-lp-rounded .card__media,
+    .ai-lp-rounded .card-wrapper .card,
+    .ai-lp-rounded .card--standard {
+        border-radius: 20px !important;
+        overflow: hidden !important;
+    }
+    .ai-lp-rounded .card__media img {
+        border-radius: 20px !important;
+    }
+    
+    /* --- Compact hero (half height) --- */
+    .ai-lp-hero-compact .banner,
+    .ai-lp-hero-compact .slideshow,
+    .ai-lp-hero-compact .hero {
+        max-height: 320px !important;
+        min-height: 200px !important;
+        overflow: hidden !important;
+    }
+    @media (max-width: 749px) {
+        .ai-lp-hero-compact .banner,
+        .ai-lp-hero-compact .slideshow,
+        .ai-lp-hero-compact .hero {
+            max-height: 220px !important;
+            min-height: 150px !important;
+        }
+    }
+    
+    /* --- Parallax hero --- */
+    .ai-lp-parallax .banner__media img,
+    .ai-lp-parallax .slideshow__image,
+    .ai-lp-parallax .hero__image img {
+        will-change: transform;
+    }
+    
+    /* --- IWT overlap --- */
+    .ai-lp-iwt-overlap .image-with-text__media-item,
+    .ai-lp-iwt-overlap .image-with-text__media {
+        margin-right: -30px !important;
+        position: relative;
+        z-index: 2;
+    }
+    .ai-lp-iwt-flip.ai-lp-iwt-overlap .image-with-text__media-item,
+    .ai-lp-iwt-flip.ai-lp-iwt-overlap .image-with-text__media {
+        margin-right: 0 !important;
+        margin-left: -30px !important;
+    }
+    
+    /* --- Extra spacing --- */
+    .ai-lp-spacing .shopify-section {
+        margin-bottom: 40px !important;
+    }
+    
+    /* --- Featured hero card (first card spans 2 cols) --- */
+    .ai-lp-featured-hero > li:first-child,
+    .ai-lp-featured-hero > .grid__item:first-child {
+        grid-column: span 2 !important;
+    }
+    .ai-lp-featured-hero > li:first-child .card__media,
+    .ai-lp-featured-hero > .grid__item:first-child .card__media {
+        min-height: 320px !important;
+    }
+    @media (max-width: 749px) {
+        .ai-lp-featured-hero > li:first-child,
+        .ai-lp-featured-hero > .grid__item:first-child {
+            grid-column: span 1 !important;
+        }
+    }
+    
+    /* --- Sticky vibe bar --- */
+    .ai-lp-vibe-bar.ai-lp-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+    }
+    
+    /* --- Section dividers --- */
+    .ai-lp-divider {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 12px 0;
+    }
+    .ai-lp-divider::before,
+    .ai-lp-divider::after {
+        content: '';
+        flex: 1;
+        max-width: 120px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #D4C5B0, transparent);
+    }
+    .ai-lp-divider svg {
+        opacity: 0.4;
+        color: #96640F;
+    }
+    
+    /* --- Vibe Bar --- */
     .ai-lp-vibe-bar {
         width: 100%;
         padding: 14px 24px;
@@ -593,12 +685,15 @@
         gap: 10px;
         box-sizing: border-box;
     }
-    
     .ai-lp-vibe-bar__icon {
-        font-size: 22px;
-        line-height: 1;
+        display: flex;
+        align-items: center;
     }
-    
+    .ai-lp-vibe-bar__icon svg {
+        width: 20px;
+        height: 20px;
+        color: #96640F;
+    }
     .ai-lp-vibe-bar__text {
         font-size: 15px;
         font-weight: 600;
@@ -606,7 +701,7 @@
         letter-spacing: 0.02em;
     }
     
-    /* Trust Block */
+    /* --- Trust Block --- */
     .ai-lp-trust-block {
         width: 100%;
         padding: 32px 24px;
@@ -620,7 +715,6 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         box-sizing: border-box;
     }
-    
     .ai-lp-trust-item {
         display: flex;
         flex-direction: column;
@@ -628,12 +722,15 @@
         gap: 8px;
         min-width: 120px;
     }
-    
     .ai-lp-trust-item__icon {
-        font-size: 28px;
-        line-height: 1;
+        display: flex;
+        align-items: center;
     }
-    
+    .ai-lp-trust-item__icon svg {
+        width: 28px;
+        height: 28px;
+        color: #96640F;
+    }
     .ai-lp-trust-item__text {
         font-size: 13px;
         font-weight: 600;
@@ -646,15 +743,10 @@
             gap: 24px;
             padding: 24px 16px;
         }
-        .ai-lp-trust-item__icon {
-            font-size: 24px;
-        }
-        .ai-lp-trust-item__text {
-            font-size: 12px;
-        }
-        .ai-lp-vibe-bar__text {
-            font-size: 13px;
-        }
+        .ai-lp-trust-item__icon svg { width: 24px; height: 24px; }
+        .ai-lp-trust-item__text { font-size: 12px; }
+        .ai-lp-vibe-bar__text { font-size: 13px; }
+        .ai-lp-vibe-bar__icon svg { width: 18px; height: 18px; }
     }
 `;
     document.head.appendChild(style);
@@ -1668,29 +1760,64 @@
     }
 
     // =====================
-    // Landing Page 个性化引擎 (LLM-Driven)
+    // Landing Page 个性化引擎 (Theme-Based LLM)
     // =====================
 
     const LP_CACHE_KEY = 'ai_lp_layout_state';
-    const LP_CACHE_TTL = 30 * 60 * 1000; // 30 分钟
-    const LP_PERSONALIZATION_KEY = 'ai_lp_personalization'; // LLM 结果缓存
+    const LP_CACHE_TTL = 30 * 60 * 1000;
+    const LP_PERSONALIZATION_KEY = 'ai_lp_personalization';
+
+    // --- Lucide SVG Icons (inline, zero deps) ---
+
+    var LUCIDE_ICONS = {
+        'paw-print': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><circle cx="4" cy="8" r="2"/><circle cx="2" cy="16" r="2"/><path d="M7 18a4 4 0 0 0 4-4 4 4 0 0 0 4 4 4 4 0 0 1-4 4 4 4 0 0 1-4-4Z"/></svg>',
+        'heart': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+        'star': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        'sparkles': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>',
+        'shield-check': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>',
+        'truck': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>',
+        'leaf': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+        'award': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
+        'check-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>',
+        'gift': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>',
+        'smile': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>',
+        'sun': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+        'zap': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+        'home': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+        'package': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>',
+    };
+
+    function getIcon(name) {
+        return LUCIDE_ICONS[name] || LUCIDE_ICONS['paw-print'];
+    }
+
+    // --- 10 Theme definitions ---
+    // Each theme: { sectionOrder, grid2col, flipIWT, hoverZoom, rounded, heroCompact, parallax, iwtOverlap, spacing, featuredHero, stickyVibe, dividers }
+
+    var THEMES = {
+        1:  { name: 'Bold Showcase',   sectionOrder: ['products','iwt','collections'], grid2col: true,  flipIWT: true,  hoverZoom: true,  rounded: false, heroCompact: false, parallax: false, iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: true,  dividers: false },
+        2:  { name: 'Story First',     sectionOrder: ['iwt','products','collections'], grid2col: false, flipIWT: true,  hoverZoom: false, rounded: false, heroCompact: false, parallax: false, iwtOverlap: true,  spacing: false, featuredHero: false, stickyVibe: false, dividers: true  },
+        3:  { name: 'Quick Shop',      sectionOrder: ['products','collections','iwt'], grid2col: true,  flipIWT: false, hoverZoom: true,  rounded: false, heroCompact: true,  parallax: false, iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: true,  dividers: false },
+        4:  { name: 'Gallery',         sectionOrder: ['products','iwt','collections'], grid2col: true,  flipIWT: false, hoverZoom: false, rounded: true,  heroCompact: false, parallax: true,  iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: false, dividers: false },
+        5:  { name: 'Discovery',       sectionOrder: ['iwt','collections','products'], grid2col: false, flipIWT: true,  hoverZoom: false, rounded: false, heroCompact: false, parallax: true,  iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: false, dividers: true  },
+        6:  { name: 'Premium',         sectionOrder: ['products','iwt','collections'], grid2col: true,  flipIWT: false, hoverZoom: true,  rounded: false, heroCompact: false, parallax: true,  iwtOverlap: true,  spacing: true,  featuredHero: false, stickyVibe: false, dividers: false },
+        7:  { name: 'Energetic',       sectionOrder: ['products','iwt','collections'], grid2col: false, flipIWT: true,  hoverZoom: false, rounded: false, heroCompact: true,  parallax: false, iwtOverlap: false, spacing: false, featuredHero: true,  stickyVibe: true,  dividers: false },
+        8:  { name: 'Cozy Browse',     sectionOrder: ['iwt','products','collections'], grid2col: false, flipIWT: false, hoverZoom: false, rounded: true,  heroCompact: false, parallax: false, iwtOverlap: false, spacing: true,  featuredHero: false, stickyVibe: false, dividers: true  },
+        9:  { name: 'Impact',          sectionOrder: ['products','collections','iwt'], grid2col: true,  flipIWT: true,  hoverZoom: true,  rounded: false, heroCompact: true,  parallax: false, iwtOverlap: true,  spacing: false, featuredHero: true,  stickyVibe: false, dividers: false },
+        10: { name: 'Clean Default',   sectionOrder: ['products','iwt','collections'], grid2col: false, flipIWT: false, hoverZoom: true,  rounded: false, heroCompact: false, parallax: false, iwtOverlap: false, spacing: false, featuredHero: false, stickyVibe: false, dividers: false },
+    };
 
     // --- LLM 个性化预加载 ---
 
     let _personalizationPromise = null;
     let _personalizationCache = null;
 
-    /**
-     * 预加载 LLM 个性化决策
-     * 在脚本加载时立即发起，与 products.json 并行
-     */
     function preloadPersonalization() {
         var utm = getUtmParams();
         if (!utm.utmSource && !utm.utmCampaign && !utm.utmContent) {
             return Promise.resolve(null);
         }
 
-        // 先检查 sessionStorage（SPA 导航缓存）
         var fingerprint = getUtmFingerprint();
         try {
             var stored = sessionStorage.getItem(LP_PERSONALIZATION_KEY);
@@ -1704,144 +1831,123 @@
             }
         } catch (e) { /* ignore */ }
 
-        var _llmFetchStart = Date.now();
-        log('[AI-LP] ⏱️ Personalization fetch started at', new Date().toISOString());
+        // 等 productMeta 准备好再发请求（需要把产品列表发给 LLM）
+        _personalizationPromise = (async function () {
+            var _llmFetchStart = Date.now();
+            log('[AI-LP] ⏱️ Personalization: waiting for product meta...');
 
-        _personalizationPromise = fetch(CONFIG.apiUrl + '/personalize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                utmSource: utm.utmSource,
-                utmMedium: utm.utmMedium,
-                utmCampaign: utm.utmCampaign,
-                utmContent: utm.utmContent,
-                utmTerm: utm.utmTerm,
-            }),
-        })
-        .then(function (res) {
-            log('[AI-LP] ⏱️ Personalization fetch response:', res.status, 'in', (Date.now() - _llmFetchStart) + 'ms');
-            return res.ok ? res.json() : null;
-        })
-        .then(function (data) {
-            var elapsed = Date.now() - _llmFetchStart;
-            if (data && data.success && data.config) {
-                _personalizationCache = data.config;
-                try {
-                    sessionStorage.setItem(LP_PERSONALIZATION_KEY, JSON.stringify({
-                        fingerprint: fingerprint,
-                        config: data.config,
-                        timestamp: Date.now(),
-                    }));
-                } catch (e) { /* ignore */ }
-                log('[AI-LP] ⏱️ LLM personalization loaded in', elapsed + 'ms', data.cached ? '(server-cached)' : '(fresh)', 'serverTime:', data.processingTime + 'ms');
-                return data.config;
+            var meta = _productMetaCache;
+            if (!meta) {
+                meta = await Promise.race([
+                    _productMetaPromise || Promise.resolve({}),
+                    new Promise(function (resolve) { setTimeout(function () { resolve({}); }, 1500); }),
+                ]);
             }
-            log('[AI-LP] ⏱️ Personalization response invalid/empty in', elapsed + 'ms');
-            return null;
-        })
-        .catch(function (err) {
-            var elapsed = Date.now() - _llmFetchStart;
-            log('[AI-LP] ⏱️ Personalization fetch FAILED in', elapsed + 'ms:', err && err.message ? err.message : err);
-            return null;
-        });
+
+            var products = [];
+            if (meta && typeof meta === 'object') {
+                Object.keys(meta).forEach(function (handle) {
+                    var p = meta[handle];
+                    products.push({ handle: p.handle, title: p.title, tags: p.tags || [] });
+                });
+            }
+
+            log('[AI-LP] ⏱️ Personalization fetch started at', new Date().toISOString(), 'with', products.length, 'products');
+
+            try {
+                var res = await fetch(CONFIG.apiUrl + '/personalize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        utmSource: utm.utmSource,
+                        utmMedium: utm.utmMedium,
+                        utmCampaign: utm.utmCampaign,
+                        utmContent: utm.utmContent,
+                        utmTerm: utm.utmTerm,
+                        products: products,
+                    }),
+                });
+
+                var elapsed1 = Date.now() - _llmFetchStart;
+                log('[AI-LP] ⏱️ Personalization fetch response:', res.status, 'in', elapsed1 + 'ms');
+
+                if (!res.ok) return null;
+                var data = await res.json();
+                var elapsed2 = Date.now() - _llmFetchStart;
+
+                if (data && data.success && data.config) {
+                    _personalizationCache = data.config;
+                    try {
+                        sessionStorage.setItem(LP_PERSONALIZATION_KEY, JSON.stringify({
+                            fingerprint: fingerprint,
+                            config: data.config,
+                            timestamp: Date.now(),
+                        }));
+                    } catch (e) { /* ignore */ }
+                    log('[AI-LP] ⏱️ LLM personalization loaded in', elapsed2 + 'ms', data.cached ? '(server-cached)' : '(fresh)', 'serverTime:', data.processingTime + 'ms');
+                    log('[AI-LP] Config:', JSON.stringify(data.config, null, 2));
+                    return data.config;
+                }
+                return null;
+            } catch (err) {
+                log('[AI-LP] ⏱️ Personalization fetch FAILED in', (Date.now() - _llmFetchStart) + 'ms:', err && err.message ? err.message : err);
+                return null;
+            }
+        })();
 
         return _personalizationPromise;
     }
 
-    // 立即开始预加载
     preloadPersonalization();
 
-    // --- 产品过滤（关键词驱动，不依赖 LLM，保持瞬时） ---
+    // --- 产品过滤（关键词驱动，瞬时，不等 LLM） ---
 
-    /**
-     * 从 UTM campaign/content 提取内容关键词
-     */
     function extractContentIntent(campaign, content) {
         var raw = [campaign, content].filter(Boolean).join('-').toLowerCase();
         if (!raw) return [];
         var tokens = raw.split(/[-_\s.]+/).filter(function (t) { return t.length > 2; });
-
-        var stopWords = [
-            'utm', 'source', 'medium', 'campaign', 'content', 'term',
-            'ad', 'ads', 'video', 'image', 'carousel', 'story', 'reel', 'post',
-            'static', 'dynamic', 'feed', 'explore', 'reels',
-            'v1', 'v2', 'v3', 'test', 'draft', 'final',
-            'the', 'for', 'and', 'with', 'from', 'new', 'best', 'top',
-            'spring', 'summer', 'fall', 'autumn', 'winter',
-            'jan', 'feb', 'mar', 'apr', 'may', 'jun',
-            'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
-            'lovers', 'fans', 'owners', 'parents', 'people',
-            'retarget', 'retargeting', 'lookalike', 'broad', 'interest',
-            'sale', 'promo', 'discount', 'offer', 'deal',
-        ];
+        var stopWords = ['utm','source','medium','campaign','content','term','ad','ads','video','image','carousel','story','reel','post','static','dynamic','feed','explore','reels','v1','v2','v3','test','draft','final','the','for','and','with','from','new','best','top','spring','summer','fall','autumn','winter','jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec','lovers','fans','owners','parents','people','retarget','retargeting','lookalike','broad','interest','sale','promo','discount','offer','deal'];
         var stopSet = {};
         stopWords.forEach(function (w) { stopSet[w] = true; });
-
         return tokens.filter(function (t) { return !stopSet[t] && !/^\d+$/.test(t); });
     }
 
-    /**
-     * 产品过滤配置（硬编码，不等 LLM，保持瞬时）
-     * 仅基于 dog/cat 关键词做白名单过滤
-     */
     var FILTER_RULES = [
-        { keywords: ['dog', 'puppy', 'canine', 'pup'], relevantTags: ['dog'], relevantKeywords: ['dog', 'puppy', 'pup'] },
-        { keywords: ['cat', 'kitten', 'feline', 'kitty'], relevantTags: ['cat'], relevantKeywords: ['cat', 'kitten', 'kitty', 'mouse', 'mousey', 'birdy', 'fish'] },
+        { keywords: ['dog','puppy','canine','pup'], relevantTags: ['dog'], relevantKeywords: ['dog','puppy','pup'] },
+        { keywords: ['cat','kitten','feline','kitty'], relevantTags: ['cat'], relevantKeywords: ['cat','kitten','kitty','mouse','mousey','birdy','fish'] },
     ];
 
     function getFilterAction(contentIntent) {
         for (var i = 0; i < FILTER_RULES.length; i++) {
             var rule = FILTER_RULES[i];
-            var match = rule.keywords.some(function (kw) { return contentIntent.indexOf(kw) !== -1; });
-            if (match) return { relevantTags: rule.relevantTags, relevantKeywords: rule.relevantKeywords };
+            if (rule.keywords.some(function (kw) { return contentIntent.indexOf(kw) !== -1; }))
+                return { relevantTags: rule.relevantTags, relevantKeywords: rule.relevantKeywords };
         }
         return { relevantTags: null, relevantKeywords: null };
     }
 
     function isProductRelevant(handle, meta, action) {
-        var relevantTags = action.relevantTags;
-        var relevantKeywords = action.relevantKeywords;
-        if (!relevantTags || relevantTags.length === 0) return true;
-
+        if (!action.relevantTags || action.relevantTags.length === 0) return true;
         if (meta && meta.tags && meta.tags.length > 0) {
-            var tagMatch = relevantTags.some(function (rt) { return meta.tags.indexOf(rt) !== -1; });
-            if (tagMatch) return true;
+            if (action.relevantTags.some(function (rt) { return meta.tags.indexOf(rt) !== -1; })) return true;
         }
-
-        if (relevantKeywords && relevantKeywords.length > 0) {
-            var searchStr = ((handle || '') + ' ' + (meta && meta.title ? meta.title : '')).toLowerCase();
-            var kwMatch = relevantKeywords.some(function (kw) { return searchStr.indexOf(kw) !== -1; });
-            if (kwMatch) return true;
+        if (action.relevantKeywords && action.relevantKeywords.length > 0) {
+            var s = ((handle || '') + ' ' + (meta && meta.title ? meta.title : '')).toLowerCase();
+            if (action.relevantKeywords.some(function (kw) { return s.indexOf(kw) !== -1; })) return true;
         }
-
-        if (!meta || (!meta.tags || meta.tags.length === 0)) return true;
+        if (!meta || !meta.tags || meta.tags.length === 0) return true;
         return false;
     }
 
     function filterByRelevance(cards, productMeta, action) {
-        if (!action.relevantTags || action.relevantTags.length === 0) {
-            return { visibleCards: cards.slice(), hiddenHandles: [] };
-        }
-
-        var relevant = [];
-        var irrelevant = [];
-
+        if (!action.relevantTags || action.relevantTags.length === 0) return { visibleCards: cards.slice(), hiddenHandles: [] };
+        var relevant = [], irrelevant = [];
         cards.forEach(function (card) {
             var handle = getProductHandleFromCard(card);
             var meta = handle ? productMeta[handle] : null;
-            if (isProductRelevant(handle, meta, action)) {
-                relevant.push({ card: card, handle: handle });
-            } else {
-                irrelevant.push({ card: card, handle: handle });
-            }
+            (isProductRelevant(handle, meta, action) ? relevant : irrelevant).push({ card: card, handle: handle });
         });
-
-        var MIN_VISIBLE = 2;
-        if (relevant.length < MIN_VISIBLE) {
-            log('[AI-LP] Only', relevant.length, 'relevant products, skipping filter');
-            return { visibleCards: cards.slice(), hiddenHandles: [] };
-        }
-
+        if (relevant.length < 2) return { visibleCards: cards.slice(), hiddenHandles: [] };
         var hiddenHandles = [];
         irrelevant.forEach(function (item) {
             item.card.classList.add('ai-lp-hidden');
@@ -1854,49 +1960,35 @@
             var unit = getReorderableUnit(item.card);
             if (unit !== item.card) unit.classList.remove('ai-lp-hidden');
         });
-
         log('[AI-LP] Filtered:', relevant.length, 'visible,', irrelevant.length, 'hidden');
-        return {
-            visibleCards: relevant.map(function (r) { return r.card; }),
-            hiddenHandles: hiddenHandles,
-        };
+        return { visibleCards: relevant.map(function (r) { return r.card; }), hiddenHandles: hiddenHandles };
     }
 
-    // --- 产品排序 ---
+    // --- 产品排序（LLM handle 顺序） ---
 
-    function reorderByRelevance(cards, productMeta, boostTags) {
-        if (!boostTags || boostTags.length === 0) return;
+    function reorderByHandleList(cards, orderedHandles) {
+        if (!orderedHandles || orderedHandles.length === 0) return;
         if (cards.length <= 1) return;
-
-        var scored = cards.map(function (card, originalIndex) {
-            var handle = getProductHandleFromCard(card);
-            var meta = handle ? productMeta[handle] : null;
-            var tags = (meta && meta.tags) ? meta.tags : [];
-            var score = 0;
-
-            boostTags.forEach(function (bt, priority) {
-                var matched = tags.some(function (t) {
-                    return t.indexOf(bt) !== -1 || bt.indexOf(t) !== -1;
-                });
-                if (matched) score += (boostTags.length - priority) * 10;
-            });
-
-            return { card: card, score: score, originalIndex: originalIndex };
-        });
-
-        scored.sort(function (a, b) {
-            if (a.score !== b.score) return b.score - a.score;
-            return a.originalIndex - b.originalIndex;
-        });
-
         var container = findCardsContainer(cards);
         if (!container) return;
 
-        var units = scored.map(function (s) { return getReorderableUnit(s.card); });
-        for (var i = 0; i < units.length; i++) {
-            container.appendChild(units[i]);
-        }
-        log('[AI-LP] Reordered', scored.length, 'products by:', boostTags.join(', '));
+        var unitMap = new Map();
+        cards.forEach(function (card) {
+            var handle = getProductHandleFromCard(card);
+            if (handle) unitMap.set(handle, getReorderableUnit(card));
+        });
+
+        var placed = {};
+        orderedHandles.forEach(function (handle) {
+            var unit = unitMap.get(handle);
+            if (unit) { container.appendChild(unit); placed[handle] = true; }
+        });
+        // Append any cards not in the LLM order
+        cards.forEach(function (card) {
+            var handle = getProductHandleFromCard(card);
+            if (handle && !placed[handle]) container.appendChild(getReorderableUnit(card));
+        });
+        log('[AI-LP] Reordered products by LLM order');
     }
 
     function findCardsContainer(cards) {
@@ -1907,11 +1999,8 @@
             var parent = unit.parentElement;
             if (parent) parentCounts.set(parent, (parentCounts.get(parent) || 0) + 1);
         });
-        var best = null;
-        var bestCount = 0;
-        parentCounts.forEach(function (count, parent) {
-            if (count > bestCount) { bestCount = count; best = parent; }
-        });
+        var best = null, bestCount = 0;
+        parentCounts.forEach(function (count, parent) { if (count > bestCount) { bestCount = count; best = parent; } });
         return best;
     }
 
@@ -1920,19 +2009,13 @@
         for (var i = 0; i < 5 && current.parentElement; i++) {
             var parent = current.parentElement;
             var tag = parent.tagName.toLowerCase();
-            if (tag === 'ul' || tag === 'ol' ||
-                parent.classList.contains('grid') ||
-                parent.classList.contains('product-grid') ||
-                parent.classList.contains('collection-product-list') ||
-                parent.classList.contains('product-list')) {
-                return current;
-            }
+            if (tag === 'ul' || tag === 'ol' || parent.classList.contains('grid') || parent.classList.contains('product-grid') || parent.classList.contains('collection-product-list') || parent.classList.contains('product-list')) return current;
             current = parent;
         }
         return card.parentElement || card;
     }
 
-    // --- 视觉组件注入 ---
+    // --- Section 查找与重排序 ---
 
     function findSectionByPattern(patterns) {
         var main = document.querySelector('#MainContent, main, [role="main"]');
@@ -1947,172 +2030,241 @@
         return null;
     }
 
-    function injectVibeBar(config) {
+    function reorderSections(sectionOrder) {
+        try {
+            var main = document.querySelector('#MainContent, main, [role="main"]');
+            if (!main) return;
+
+            var heroSection = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
+            var productsSection = findSectionByPattern(['featured']);
+            var iwtSection = findSectionByPattern(['image_with_text']);
+            var collectionsSection = findSectionByPattern(['collection_list']);
+
+            if (!heroSection) return;
+
+            var sectionMap = { products: productsSection, iwt: iwtSection, collections: collectionsSection };
+            var anchor = heroSection;
+
+            // Also account for injected vibe bar between hero and next section
+            var vibeBar = document.querySelector('[data-ai-lp-vibe-bar]');
+            if (vibeBar) anchor = vibeBar;
+
+            sectionOrder.forEach(function (key) {
+                var section = sectionMap[key];
+                if (section && section.parentElement) {
+                    anchor.parentElement.insertBefore(section, anchor.nextSibling);
+                    anchor = section;
+                }
+            });
+            log('[AI-LP] Sections reordered:', sectionOrder.join(' → '));
+        } catch (err) {
+            log('[AI-LP] Section reorder error:', err);
+        }
+    }
+
+    // --- 视觉组件 ---
+
+    function injectVibeBar(config, sticky) {
         try {
             if (document.querySelector('[data-ai-lp-vibe-bar]')) return;
             if (!config || !config.copy || !config.copy.vibeBarText) return;
-
             var heroSection = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
             if (!heroSection) return;
 
             var bar = document.createElement('div');
-            bar.className = 'ai-lp-vibe-bar';
+            bar.className = 'ai-lp-vibe-bar' + (sticky ? ' ai-lp-sticky' : '');
             bar.setAttribute('data-ai-lp-vibe-bar', 'true');
-            bar.innerHTML = '<span class="ai-lp-vibe-bar__icon">' + (config.copy.vibeBarIcon || '🐾') + '</span>' +
+            bar.innerHTML = '<span class="ai-lp-vibe-bar__icon">' + getIcon(config.vibeIcon || 'paw-print') + '</span>' +
                             '<span class="ai-lp-vibe-bar__text">' + config.copy.vibeBarText + '</span>';
-
             heroSection.parentElement.insertBefore(bar, heroSection.nextSibling);
-            log('[AI-LP] ✅ Vibe Bar injected');
-        } catch (err) {
-            log('[AI-LP] Vibe Bar error:', err);
-        }
+            log('[AI-LP] Vibe Bar injected' + (sticky ? ' (sticky)' : ''));
+        } catch (err) { log('[AI-LP] Vibe Bar error:', err); }
     }
 
     function injectTrustBlock(config) {
         try {
             if (document.querySelector('[data-ai-lp-trust-block]')) return;
             if (!config || !config.copy || !config.copy.trustItems) return;
-            if (config.visual && config.visual.intensity !== 'full') return;
-
             var productsSection = findSectionByPattern(['featured', 'collection']);
-            // 注意排除 collection_list
-            if (productsSection && (productsSection.id || '').toLowerCase().includes('collection_list')) {
-                productsSection = null;
-            }
+            if (productsSection && (productsSection.id || '').toLowerCase().includes('collection_list')) productsSection = null;
             if (!productsSection) return;
 
-            var trustIcons = ['✅', '🚚', '🌿'];
+            var icons = config.trustIcons || ['shield-check', 'truck', 'leaf'];
             var items = config.copy.trustItems;
-
             var block = document.createElement('div');
             block.className = 'ai-lp-trust-block';
             block.setAttribute('data-ai-lp-trust-block', 'true');
-
             for (var i = 0; i < 3 && i < items.length; i++) {
-                block.innerHTML += '<div class="ai-lp-trust-item">' +
-                    '<span class="ai-lp-trust-item__icon">' + trustIcons[i] + '</span>' +
-                    '<span class="ai-lp-trust-item__text">' + items[i] + '</span>' +
-                    '</div>';
+                block.innerHTML += '<div class="ai-lp-trust-item"><span class="ai-lp-trust-item__icon">' + getIcon(icons[i]) + '</span><span class="ai-lp-trust-item__text">' + items[i] + '</span></div>';
             }
-
             productsSection.parentElement.insertBefore(block, productsSection.nextSibling);
-            log('[AI-LP] ✅ Trust Block injected');
-        } catch (err) {
-            log('[AI-LP] Trust Block error:', err);
-        }
+            log('[AI-LP] Trust Block injected');
+        } catch (err) { log('[AI-LP] Trust Block error:', err); }
     }
 
-    function applyGridLayout(container, cols) {
+    function injectDividers() {
         try {
-            if (!container || !cols) return;
-            if (cols === 2) {
-                container.classList.add('ai-lp-grid-2col');
-            } else {
-                container.classList.remove('ai-lp-grid-2col');
-            }
-            log('[AI-LP] Grid layout:', cols, 'columns');
-        } catch (err) {
-            log('[AI-LP] Grid layout error:', err);
-        }
+            var main = document.querySelector('#MainContent, main, [role="main"]');
+            if (!main) return;
+            var sections = main.querySelectorAll('.shopify-section');
+            sections.forEach(function (section) {
+                if (section.nextElementSibling && section.nextElementSibling.classList.contains('shopify-section') && !section.nextElementSibling.previousElementSibling.classList.contains('ai-lp-divider')) {
+                    var divider = document.createElement('div');
+                    divider.className = 'ai-lp-divider';
+                    divider.setAttribute('data-ai-lp-divider', 'true');
+                    divider.innerHTML = getIcon('sparkles');
+                    section.parentElement.insertBefore(divider, section.nextSibling);
+                }
+            });
+            log('[AI-LP] Section dividers injected');
+        } catch (err) { log('[AI-LP] Dividers error:', err); }
     }
 
-    function flipImageWithText(shouldFlip) {
-        try {
-            var iwtSection = findSectionByPattern(['image_with_text']);
-            if (!iwtSection) return;
+    // --- 文案替换（保持字号） ---
 
-            if (shouldFlip) {
-                iwtSection.classList.add('ai-lp-iwt-flip');
-            } else {
-                iwtSection.classList.remove('ai-lp-iwt-flip');
+    function setTextSafe(section, selector, text) {
+        if (!section || !text) return;
+        var el = section.querySelector(selector);
+        if (!el) return;
+
+        // 查找最内层的文本承载元素（h1, h2, h3, p, span 等），避免替换 wrapper div
+        var innerEl = el;
+        var headings = el.querySelectorAll('h1, h2, h3, p, span');
+        if (headings.length > 0) {
+            // 选最深的那个
+            innerEl = headings[headings.length - 1];
+            for (var i = 0; i < headings.length; i++) {
+                if (headings[i].textContent.trim().length > 0) { innerEl = headings[i]; break; }
             }
-            log('[AI-LP] IWT flip:', shouldFlip);
-        } catch (err) {
-            log('[AI-LP] IWT flip error:', err);
         }
+        if (!innerEl.dataset.aiOriginalText) {
+            innerEl.dataset.aiOriginalText = innerEl.textContent;
+        }
+        innerEl.textContent = text;
+        log('[AI-LP] Text: "' + (innerEl.dataset.aiOriginalText || '').slice(0, 20) + '..." → "' + text + '"');
     }
 
     function applyTextFromConfig(config) {
         try {
             if (!config || !config.copy) return;
-
-            var textRules = [
-                { patterns: ['image_banner', 'slideshow', 'hero'], selector: 'h2, .banner__heading, .slideshow__heading', text: config.copy.heroTitle },
-                { patterns: ['featured'], selector: 'h2, .title, .collection__title', text: config.copy.featuredTitle },
+            var rules = [
+                { patterns: ['image_banner','slideshow','hero'], selector: 'h2, h1, .banner__heading, .slideshow__heading', text: config.copy.heroTitle },
+                { patterns: ['featured'], selector: '.collection__title, .title-wrapper, h2, .title', text: config.copy.featuredTitle },
                 { patterns: ['image_with_text'], selector: 'h2, .image-with-text__heading', text: config.copy.iwtTitle },
                 { patterns: ['image_with_text'], selector: '.image-with-text__text p, .rte p, p', text: config.copy.iwtBody },
             ];
-
-            textRules.forEach(function (rule) {
-                if (!rule.text) return;
+            rules.forEach(function (rule) {
                 var section = findSectionByPattern(rule.patterns);
-                if (!section) return;
-                var el = section.querySelector(rule.selector);
-                if (!el) return;
-                if (!el.dataset.aiOriginalText) {
-                    el.dataset.aiOriginalText = el.textContent;
-                }
-                el.textContent = rule.text;
-                log('[AI-LP] Text: "' + (el.dataset.aiOriginalText || '').slice(0, 25) + '..." → "' + rule.text + '"');
+                setTextSafe(section, rule.selector, rule.text);
             });
-        } catch (err) {
-            log('[AI-LP] Text personalization error:', err);
-        }
+        } catch (err) { log('[AI-LP] Text error:', err); }
     }
 
-    /**
-     * 应用所有 LLM 驱动的视觉变化（Phase 2）
-     */
-    function applyLLMVisualChanges(config, container) {
-        if (!config) return;
+    // --- Parallax hero effect ---
 
-        var visual = config.visual || {};
-        var intensity = visual.intensity || 'none';
+    function initParallax() {
+        try {
+            var heroImg = document.querySelector('.banner__media img, .slideshow__image, .hero__image img');
+            if (!heroImg) return;
+            heroImg.style.transition = 'transform 0.1s linear';
+            window.addEventListener('scroll', function () {
+                var scrollY = window.pageYOffset || window.scrollY;
+                if (scrollY < 800) {
+                    heroImg.style.transform = 'translateY(' + (scrollY * 0.3) + 'px) scale(1.08)';
+                }
+            }, { passive: true });
+            log('[AI-LP] Parallax initialized');
+        } catch (err) { log('[AI-LP] Parallax error:', err); }
+    }
 
-        if (intensity === 'none') {
-            log('[AI-LP] Visual intensity: none, skipping visual changes');
-            return;
-        }
+    // --- 应用 Theme ---
 
-        // 文案个性化（light + full）
+    function applyTheme(themeNum, config, container) {
+        var theme = THEMES[themeNum] || THEMES[10];
+        log('[AI-LP] Applying theme', themeNum, '(' + theme.name + ')');
+
+        // 文案
         applyTextFromConfig(config);
 
-        // Vibe Bar（light + full）
-        injectVibeBar(config);
+        // Vibe Bar（所有 theme 都有）
+        injectVibeBar(config, theme.stickyVibe);
 
-        if (intensity === 'full') {
-            // Trust Block
-            injectTrustBlock(config);
+        // Trust Block（所有 theme 都有）
+        injectTrustBlock(config);
 
-            // Grid layout
-            if (container && visual.gridCols) {
-                applyGridLayout(container, visual.gridCols);
-            }
+        // Section 重排序
+        reorderSections(theme.sectionOrder);
 
-            // IWT flip
-            if (visual.flipIWT) {
-                flipImageWithText(true);
-            }
+        // Grid layout
+        if (theme.grid2col && container) container.classList.add('ai-lp-grid-2col');
+
+        // IWT flip
+        if (theme.flipIWT) {
+            var iwt = findSectionByPattern(['image_with_text']);
+            if (iwt) iwt.classList.add('ai-lp-iwt-flip');
         }
 
-        log('[AI-LP] ✅ Visual changes applied (intensity: ' + intensity + ')');
+        // IWT overlap
+        if (theme.iwtOverlap) {
+            var iwtOv = findSectionByPattern(['image_with_text']);
+            if (iwtOv) iwtOv.classList.add('ai-lp-iwt-overlap');
+        }
+
+        // Hover zoom
+        if (theme.hoverZoom && container) {
+            var gridParent = container.closest('.shopify-section') || container.parentElement;
+            if (gridParent) gridParent.classList.add('ai-lp-hover-zoom');
+        }
+
+        // Rounded cards
+        if (theme.rounded && container) {
+            var roundParent = container.closest('.shopify-section') || container.parentElement;
+            if (roundParent) roundParent.classList.add('ai-lp-rounded');
+        }
+
+        // Compact hero
+        if (theme.heroCompact) {
+            var heroSec = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
+            if (heroSec) heroSec.classList.add('ai-lp-hero-compact');
+        }
+
+        // Parallax
+        if (theme.parallax) {
+            var heroPar = findSectionByPattern(['image_banner', 'slideshow', 'hero']);
+            if (heroPar) { heroPar.classList.add('ai-lp-parallax'); initParallax(); }
+        }
+
+        // Extra spacing
+        if (theme.spacing) {
+            var mainEl = document.querySelector('#MainContent, main, [role="main"]');
+            if (mainEl) mainEl.classList.add('ai-lp-spacing');
+        }
+
+        // Featured hero card (first card enlarged)
+        if (theme.featuredHero && container) container.classList.add('ai-lp-featured-hero');
+
+        // Section dividers
+        if (theme.dividers) injectDividers();
+
+        log('[AI-LP] Theme', themeNum, 'applied successfully');
     }
+
+    // --- Cleanup ---
 
     function cleanupInjectedElements() {
         try {
-            var vibeBar = document.querySelector('[data-ai-lp-vibe-bar]');
-            if (vibeBar) vibeBar.remove();
-            var trustBlock = document.querySelector('[data-ai-lp-trust-block]');
-            if (trustBlock) trustBlock.remove();
-            var elements = document.querySelectorAll('[data-ai-original-text]');
-            elements.forEach(function (el) {
+            // Remove injected elements
+            document.querySelectorAll('[data-ai-lp-vibe-bar],[data-ai-lp-trust-block],[data-ai-lp-divider]').forEach(function (el) { el.remove(); });
+            // Restore text
+            document.querySelectorAll('[data-ai-original-text]').forEach(function (el) {
                 el.textContent = el.dataset.aiOriginalText;
                 el.removeAttribute('data-ai-original-text');
             });
-            var flipped = document.querySelectorAll('.ai-lp-iwt-flip');
-            flipped.forEach(function (el) { el.classList.remove('ai-lp-iwt-flip'); });
-            var gridOverrides = document.querySelectorAll('.ai-lp-grid-2col');
-            gridOverrides.forEach(function (el) { el.classList.remove('ai-lp-grid-2col'); });
+            // Remove all theme CSS classes
+            var themeClasses = ['ai-lp-iwt-flip','ai-lp-iwt-overlap','ai-lp-grid-2col','ai-lp-hover-zoom','ai-lp-rounded','ai-lp-hero-compact','ai-lp-parallax','ai-lp-spacing','ai-lp-featured-hero'];
+            themeClasses.forEach(function (cls) {
+                document.querySelectorAll('.' + cls).forEach(function (el) { el.classList.remove(cls); });
+            });
         } catch (err) { /* ignore */ }
     }
 
@@ -2131,9 +2283,7 @@
                 utmFingerprint: decision.utmFingerprint,
                 timestamp: Date.now(),
             }));
-        } catch (e) {
-            log('[AI-LP] Cache write failed:', e);
-        }
+        } catch (e) { log('[AI-LP] Cache write failed:', e); }
     }
 
     function restoreLayoutDecision() {
@@ -2141,14 +2291,8 @@
             var raw = sessionStorage.getItem(LP_CACHE_KEY);
             if (!raw) return null;
             var state = JSON.parse(raw);
-            if (state.utmFingerprint !== getUtmFingerprint()) {
-                sessionStorage.removeItem(LP_CACHE_KEY);
-                return null;
-            }
-            if (Date.now() - state.timestamp > LP_CACHE_TTL) {
-                sessionStorage.removeItem(LP_CACHE_KEY);
-                return null;
-            }
+            if (state.utmFingerprint !== getUtmFingerprint()) { sessionStorage.removeItem(LP_CACHE_KEY); return null; }
+            if (Date.now() - state.timestamp > LP_CACHE_TTL) { sessionStorage.removeItem(LP_CACHE_KEY); return null; }
             return state;
         } catch (e) { return null; }
     }
@@ -2158,35 +2302,20 @@
             var container = findCardsContainer(cards);
             if (container) {
                 var unitMap = new Map();
-                cards.forEach(function (card) {
-                    var handle = getProductHandleFromCard(card);
-                    if (handle) unitMap.set(handle, getReorderableUnit(card));
-                });
+                cards.forEach(function (card) { var h = getProductHandleFromCard(card); if (h) unitMap.set(h, getReorderableUnit(card)); });
                 var placed = {};
-                cached.productOrder.forEach(function (handle) {
-                    var unit = unitMap.get(handle);
-                    if (unit) { container.appendChild(unit); placed[handle] = true; }
-                });
-                cards.forEach(function (card) {
-                    var handle = getProductHandleFromCard(card);
-                    if (handle && !placed[handle]) container.appendChild(getReorderableUnit(card));
-                });
+                cached.productOrder.forEach(function (h) { var u = unitMap.get(h); if (u) { container.appendChild(u); placed[h] = true; } });
+                cards.forEach(function (card) { var h = getProductHandleFromCard(card); if (h && !placed[h]) container.appendChild(getReorderableUnit(card)); });
             }
         }
-
         if (cached.hiddenProducts && cached.hiddenProducts.length > 0) {
             var hiddenSet = {};
             cached.hiddenProducts.forEach(function (h) { hiddenSet[h] = true; });
             cards.forEach(function (card) {
-                var handle = getProductHandleFromCard(card);
+                var h = getProductHandleFromCard(card);
                 var unit = getReorderableUnit(card);
-                if (handle && hiddenSet[handle]) {
-                    card.classList.add('ai-lp-hidden');
-                    if (unit !== card) unit.classList.add('ai-lp-hidden');
-                } else {
-                    card.classList.remove('ai-lp-hidden');
-                    if (unit !== card) unit.classList.remove('ai-lp-hidden');
-                }
+                if (h && hiddenSet[h]) { card.classList.add('ai-lp-hidden'); if (unit !== card) unit.classList.add('ai-lp-hidden'); }
+                else { card.classList.remove('ai-lp-hidden'); if (unit !== card) unit.classList.remove('ai-lp-hidden'); }
             });
         }
         log('[AI-LP] Restored product layout from cache');
@@ -2200,34 +2329,19 @@
             if (path !== '/' && path !== '') return;
 
             var allCards = findProductCards();
-            var cards = allCards.filter(function (card) {
-                return getProductHandleFromCard(card) !== null;
-            });
+            var cards = allCards.filter(function (card) { return getProductHandleFromCard(card) !== null; });
             if (!cards || cards.length === 0) return;
 
             var container = findCardsContainer(cards);
-            if (!container) {
-                log('[AI-LP] No card container found, skipping');
-                return;
-            }
+            if (!container) { log('[AI-LP] No card container found'); return; }
 
-            // 幂等检查
-            if (container.getAttribute('data-ai-lp-applied') === 'true') {
-                log('[AI-LP] Already applied, skipping');
-                return;
-            }
-
-            // 清理上一次的注入（SPA 导航后重新应用时需要）
+            if (container.getAttribute('data-ai-lp-applied') === 'true') { log('[AI-LP] Already applied'); return; }
             cleanupInjectedElements();
 
             var utm = getUtmParams();
             var contentIntent = extractContentIntent(utm.utmCampaign, utm.utmContent);
 
-            // ========================================
-            // Phase 1: 瞬时操作（不等 LLM）
-            // ========================================
-
-            // 1a. 等待产品元数据
+            // ========== Phase 1: 瞬时过滤 ==========
             var productMeta = _productMetaCache;
             if (!productMeta) {
                 productMeta = await Promise.race([
@@ -2237,81 +2351,52 @@
                 if (!productMeta) productMeta = {};
             }
 
-            // 1b. 产品过滤（硬编码关键词，瞬时）
             var filterAction = getFilterAction(contentIntent);
             var filterResult = filterByRelevance(cards, productMeta, filterAction);
             var visibleCards = filterResult.visibleCards;
             var hiddenHandles = filterResult.hiddenHandles;
+            log('[AI-LP] Phase 1 done:', visibleCards.length, 'visible,', hiddenHandles.length, 'hidden');
 
-            log('[AI-LP] Phase 1 done: filtered', visibleCards.length, 'visible,', hiddenHandles.length, 'hidden');
-
-            // 1c. 检查布局缓存（SPA 返回时恢复排序）
             var cached = restoreLayoutDecision();
             if (cached) {
                 restoreFromCache(cards, cached);
                 visibleCards = cards.filter(function (c) { return !c.classList.contains('ai-lp-hidden'); });
             }
 
-            // ========================================
-            // Phase 2: LLM 驱动（异步，最多等 10s）
-            // ========================================
-
+            // ========== Phase 2: LLM Theme ==========
             var _phase2Start = Date.now();
             var llmConfig = _personalizationCache;
-            if (llmConfig) {
-                log('[AI-LP] ⏱️ Phase 2: LLM config already in cache (0ms wait)');
-            }
+            if (llmConfig) { log('[AI-LP] ⏱️ Phase 2: config in cache (0ms)'); }
             if (!llmConfig) {
-                log('[AI-LP] ⏱️ Phase 2: Waiting for LLM response (max 10s)...');
+                log('[AI-LP] ⏱️ Phase 2: Waiting for LLM (max 10s)...');
                 llmConfig = await Promise.race([
                     _personalizationPromise || Promise.resolve(null),
                     new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 10000); }),
                 ]);
-                log('[AI-LP] ⏱️ Phase 2: LLM wait completed in', (Date.now() - _phase2Start) + 'ms', llmConfig ? '(got config)' : '(timeout/null)');
+                log('[AI-LP] ⏱️ Phase 2: wait done in', (Date.now() - _phase2Start) + 'ms', llmConfig ? '(got config)' : '(timeout)');
             }
 
             if (llmConfig) {
-                log('[AI-LP] Phase 2: LLM config available, applying...');
-
-                // 2a. LLM 驱动的产品排序
-                var sortHints = llmConfig.sortHints || [];
-                if (sortHints.length > 0) {
-                    reorderByRelevance(visibleCards, productMeta, sortHints);
+                // LLM-driven product reorder
+                if (llmConfig.productOrder && llmConfig.productOrder.length > 0) {
+                    reorderByHandleList(visibleCards, llmConfig.productOrder);
                 }
-
-                // 2b. 视觉变化（Vibe Bar, Trust Block, Grid, IWT flip, Text）
-                applyLLMVisualChanges(llmConfig, container);
+                // Apply theme
+                applyTheme(llmConfig.theme || 10, llmConfig, container);
             } else {
-                log('[AI-LP] Phase 2: No LLM config, using fallback');
-
-                // 降级：用 contentIntent 做基本排序
-                if (contentIntent.length > 0) {
-                    reorderByRelevance(visibleCards, productMeta, contentIntent);
-                }
+                log('[AI-LP] Phase 2: No LLM, applying default theme');
+                applyTheme(10, { copy: {}, vibeIcon: 'paw-print', trustIcons: ['shield-check','truck','leaf'] }, container);
             }
 
-            // 收集最终排序并缓存
-            var orderedHandles = visibleCards.map(function (c) {
-                return getProductHandleFromCard(c);
-            }).filter(Boolean);
-
+            // Cache final state
+            var orderedHandles = visibleCards.map(function (c) { return getProductHandleFromCard(c); }).filter(Boolean);
             container.setAttribute('data-ai-lp-applied', 'true');
-            cacheLayoutDecision({
-                productOrder: orderedHandles,
-                hiddenProducts: hiddenHandles,
-                utmFingerprint: getUtmFingerprint(),
-            });
+            cacheLayoutDecision({ productOrder: orderedHandles, hiddenProducts: hiddenHandles, utmFingerprint: getUtmFingerprint() });
 
-            log('[AI-LP] ✅ Personalization complete' +
-                (llmConfig ? ' (LLM-driven)' : ' (fallback)') +
-                ', visible=' + visibleCards.length +
-                ', hidden=' + hiddenHandles.length);
-
+            log('[AI-LP] ✅ Done' + (llmConfig ? ' (theme ' + llmConfig.theme + ')' : ' (fallback)'));
         } catch (err) {
-            log('[AI-LP] ❌ Error (graceful degradation):', err);
-            if (typeof console !== 'undefined' && console.error) {
-                console.error('[AI-LP] Personalization error:', err);
-            }
+            log('[AI-LP] ❌ Error:', err);
+            if (typeof console !== 'undefined' && console.error) console.error('[AI-LP] Personalization error:', err);
         }
     }
 
