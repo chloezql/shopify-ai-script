@@ -601,25 +601,36 @@
         padding-left: 0.5rem;
     }
     
-    /* --- Fix: ensure images fill cards properly in grid mode --- */
-    .ai-lp-grid-2col .card-wrapper,
-    .ai-lp-grid-3col .card-wrapper {
+    /* --- Fix: ensure cards and images fill grid cells properly --- */
+    .ai-lp-grid-2col > .grid__item,
+    .ai-lp-grid-3col > .grid__item {
         width: 100% !important;
+        max-width: 100% !important;
+    }
+    .ai-lp-grid-2col .card-wrapper,
+    .ai-lp-grid-3col .card-wrapper,
+    .ai-lp-grid-2col .card,
+    .ai-lp-grid-3col .card,
+    .ai-lp-grid-2col .card__inner,
+    .ai-lp-grid-3col .card__inner {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .ai-lp-grid-2col .card__media,
+    .ai-lp-grid-3col .card__media {
+        width: 100% !important;
+    }
+    .ai-lp-grid-2col .card__media .media,
+    .ai-lp-grid-3col .card__media .media {
+        width: 100% !important;
+        overflow: hidden !important;
     }
     .ai-lp-grid-2col .card__media img,
     .ai-lp-grid-3col .card__media img {
         width: 100% !important;
         height: 100% !important;
-        object-fit: cover !important;
-    }
-    .ai-lp-grid-2col .card__media .media,
-    .ai-lp-grid-3col .card__media .media {
-        overflow: hidden !important;
-    }
-    /* Override Dawn's sizes attribute which references slider widths */
-    .ai-lp-grid-2col .card__media img,
-    .ai-lp-grid-3col .card__media img {
         max-width: 100% !important;
+        object-fit: cover !important;
     }
     
     /* --- IWT flip (direction trick) --- */
@@ -2606,6 +2617,16 @@
                 if (sliderBtns) sliderBtns.style.display = 'none';
                 if (sliderCounter) sliderCounter.style.display = 'none';
             }
+            // Fix image sizes attribute — Dawn's srcset uses sizes based on slider widths,
+            // which causes browsers to load tiny images when we switch to grid.
+            // Update sizes to match actual grid column widths.
+            var newSizes = theme.gridCols === 2
+                ? '(min-width: 750px) calc(50vw - 4rem), calc(100vw - 2rem)'
+                : '(min-width: 990px) calc(33vw - 3rem), (min-width: 750px) calc(50vw - 3rem), calc(100vw - 2rem)';
+            container.querySelectorAll('img[sizes]').forEach(function (img) {
+                img.setAttribute('sizes', newSizes);
+            });
+            log('[AI-LP] Updated img sizes for', theme.gridCols + '-col grid');
         }
 
         // === Featured hero card (first card spans 2 cols) ===
