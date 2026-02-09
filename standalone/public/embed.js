@@ -143,6 +143,61 @@
     saveUtmToSession();
 
     // =====================
+    // Landing Page 个性化 - 产品元数据预加载
+    // =====================
+
+    let _productMetaPromise = null;
+    let _productMetaCache = null;
+
+    /**
+     * 预加载产品元数据（tags/title/handle）
+     * 在脚本加载时立即发起，不等 DOM
+     * 到 init() 执行时（300ms 后）数据通常已就绪
+     */
+    function preloadProductMeta() {
+        if (_productMetaPromise) return _productMetaPromise;
+
+        _productMetaPromise = fetch(window.location.origin + '/products.json?limit=250')
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                if (!data || !data.products) return {};
+                var meta = {};
+                data.products.forEach(function (p) {
+                    // Shopify products.json tags 可能是数组也可能是逗号分隔字符串
+                    var rawTags = p.tags;
+                    var parsedTags;
+                    if (Array.isArray(rawTags)) {
+                        parsedTags = rawTags.map(function (t) { return String(t).toLowerCase().trim(); });
+                    } else if (typeof rawTags === 'string' && rawTags.length > 0) {
+                        parsedTags = rawTags.split(',').map(function (t) { return t.toLowerCase().trim(); }).filter(Boolean);
+                    } else {
+                        parsedTags = [];
+                    }
+                    meta[p.handle] = {
+                        handle: p.handle,
+                        title: (p.title || '').toLowerCase(),
+                        tags: parsedTags,
+                        type: (p.product_type || '').toLowerCase(),
+                        price: p.variants && p.variants[0] ? parseFloat(p.variants[0].price) : 0,
+                        available: p.variants ? p.variants.some(function (v) { return v.available; }) : false,
+                    };
+                });
+                _productMetaCache = meta;
+                log('[AI-LP] Product meta loaded:', Object.keys(meta).length, 'products');
+                return meta;
+            })
+            .catch(function (err) {
+                log('[AI-LP] Product meta fetch failed:', err && err.message ? err.message : err);
+                return {};
+            });
+
+        return _productMetaPromise;
+    }
+
+    // 立即开始预加载（不等 DOM，尽早完成）
+    preloadProductMeta();
+
+    // =====================
     // SessionStorage 缓存（跨页面持久化）
     // =====================
 
@@ -466,6 +521,14 @@
             padding: 12px 36px;
             font-size: 14px;
         }
+    }
+    
+    /* ===================== */
+    /* Landing Page 个性化 */
+    /* ===================== */
+    
+    .ai-lp-hidden {
+        display: none !important;
     }
 `;
     document.head.appendChild(style);
@@ -868,6 +931,12 @@
     }
 
     async function processProductCard(card, index) {
+        // 跳过被个性化引擎隐藏的卡片（节省 API 调用）
+        if (card.classList.contains('ai-lp-hidden')) {
+            log('Skipping hidden card (personalization):', index);
+            return;
+        }
+
         const productHandle = getProductHandleFromCard(card);
         if (!productHandle) {
             log('No product handle found for card', index);
@@ -1473,6 +1542,560 @@
     }
 
     // =====================
+    // Landing Page 个性化引擎
+    // =====================
+
+    const LP_CACHE_KEY = 'ai_lp_layout_state';
+    const LP_CACHE_TTL = 30 * 60 * 1000; // 30 分钟
+
+    // --- 个性化规则配置 ---
+
+    /**
+     * 规则从上到下 first-match。
+     * match.contentKeywords  → 与 UTM campaign/content 提取的关键词做匹配
+     * match.trafficSource    → 与归类后的流量平台做匹配
+     * action.relevantTags    → null 表示不过滤，数组表示白名单（只显示匹配的产品）
+     * action.boostTags       → 匹配的产品排在前面
+     * action.relevantKeywords→ 当产品无 tag 时，用 handle/title 做关键词兜底匹配
+     */
+    const PERSONALIZATION_RULES = [
+        // 内容关键词匹配（优先级最高：UTM 里包含动物类型）
+        {
+            id: 'dog_content',
+            name: 'Dog ads → dog products',
+            match: { contentKeywords: ['dog', 'puppy', 'canine', 'pup'] },
+            action: {
+                relevantTags: ['dog'],
+                boostTags: ['dog'],
+                relevantKeywords: ['dog', 'puppy', 'pup'],
+            },
+        },
+        {
+            id: 'cat_content',
+            name: 'Cat ads → cat products',
+            match: { contentKeywords: ['cat', 'kitten', 'feline', 'kitty'] },
+            action: {
+                relevantTags: ['cat'],
+                boostTags: ['cat'],
+                relevantKeywords: ['cat', 'kitten', 'kitty', 'mouse', 'mousey', 'birdy', 'fish'],
+            },
+        },
+        // 平台级匹配（无内容过滤，仅排序偏好）
+        {
+            id: 'tiktok_trending',
+            name: 'TikTok → trending first',
+            match: { trafficSource: ['tiktok'] },
+            action: {
+                relevantTags: null,
+                boostTags: ['trending', 'new-arrival', 'viral'],
+                relevantKeywords: null,
+            },
+        },
+        {
+            id: 'instagram_lifestyle',
+            name: 'Instagram → lifestyle first',
+            match: { trafficSource: ['instagram'] },
+            action: {
+                relevantTags: null,
+                boostTags: ['lifestyle', 'bestseller', 'aesthetic'],
+                relevantKeywords: null,
+            },
+        },
+        {
+            id: 'google_intent',
+            name: 'Google → bestseller first',
+            match: { trafficSource: ['google'] },
+            action: {
+                relevantTags: null,
+                boostTags: ['bestseller', 'top-rated', 'popular'],
+                relevantKeywords: null,
+            },
+        },
+        {
+            id: 'facebook_social',
+            name: 'Facebook → popular first',
+            match: { trafficSource: ['facebook'] },
+            action: {
+                relevantTags: null,
+                boostTags: ['bestseller', 'gift', 'popular'],
+                relevantKeywords: null,
+            },
+        },
+    ];
+
+    const DEFAULT_LP_ACTION = {
+        relevantTags: null,
+        boostTags: [],
+        relevantKeywords: null,
+    };
+
+    // --- 上下文构建 ---
+
+    function buildLayoutContext() {
+        var utm = getUtmParams();
+        return {
+            utmSource: utm.utmSource,
+            utmCampaign: utm.utmCampaign,
+            utmMedium: utm.utmMedium,
+            utmContent: utm.utmContent,
+            trafficSource: classifyTrafficSource(utm.utmSource, document.referrer),
+            contentIntent: extractContentIntent(utm.utmCampaign, utm.utmContent),
+        };
+    }
+
+    function classifyTrafficSource(utmSource, referrer) {
+        var source = (utmSource || '').toLowerCase();
+        var ref = (referrer || '').toLowerCase();
+
+        if (source.includes('instagram') || source === 'ig') return 'instagram';
+        if (source.includes('tiktok') || source === 'tt') return 'tiktok';
+        if (source.includes('facebook') || source === 'fb') return 'facebook';
+        if (source.includes('google')) return 'google';
+        if (source.includes('email') || source.includes('newsletter')) return 'email';
+        if (ref.includes('instagram.com')) return 'instagram';
+        if (ref.includes('tiktok.com')) return 'tiktok';
+        if (ref.includes('facebook.com')) return 'facebook';
+        if (ref.includes('google.com') || ref.includes('google.co')) return 'google';
+
+        return source || 'direct';
+    }
+
+    function extractContentIntent(campaign, content) {
+        var raw = [campaign, content].filter(Boolean).join('-').toLowerCase();
+        if (!raw) return [];
+        var tokens = raw.split(/[-_\s.]+/).filter(function (t) { return t.length > 2; });
+
+        var stopWords = [
+            'utm', 'source', 'medium', 'campaign', 'content', 'term',
+            'ad', 'ads', 'video', 'image', 'carousel', 'story', 'reel', 'post',
+            'static', 'dynamic', 'feed', 'explore', 'reels',
+            'v1', 'v2', 'v3', 'test', 'draft', 'final',
+            'the', 'for', 'and', 'with', 'from', 'new', 'best', 'top',
+            'spring', 'summer', 'fall', 'autumn', 'winter',
+            'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+            'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+            'lovers', 'fans', 'owners', 'parents', 'people',
+            'retarget', 'retargeting', 'lookalike', 'broad', 'interest',
+            'sale', 'promo', 'discount', 'offer', 'deal',
+        ];
+        var stopSet = {};
+        stopWords.forEach(function (w) { stopSet[w] = true; });
+
+        return tokens.filter(function (t) { return !stopSet[t] && !/^\d+$/.test(t); });
+    }
+
+    // --- 规则匹配 ---
+
+    function selectPersonalizationRule(context) {
+        for (var i = 0; i < PERSONALIZATION_RULES.length; i++) {
+            var rule = PERSONALIZATION_RULES[i];
+            if (matchesLpRule(rule.match, context)) {
+                return { ruleId: rule.id, action: rule.action, matchType: 'explicit' };
+            }
+        }
+
+        // 自动意图匹配：UTM 关键词直接作为 relevantTags 尝试
+        if (context.contentIntent && context.contentIntent.length > 0) {
+            return {
+                ruleId: 'auto_intent',
+                action: {
+                    relevantTags: context.contentIntent,
+                    boostTags: context.contentIntent,
+                    relevantKeywords: context.contentIntent,
+                },
+                matchType: 'auto',
+            };
+        }
+
+        return { ruleId: 'default', action: DEFAULT_LP_ACTION, matchType: 'default' };
+    }
+
+    function matchesLpRule(conditions, context) {
+        if (conditions.contentKeywords && conditions.contentKeywords.length > 0) {
+            var hasMatch = conditions.contentKeywords.some(function (kw) {
+                return context.contentIntent.indexOf(kw) !== -1;
+            });
+            if (hasMatch) return true;
+        }
+
+        if (conditions.trafficSource && conditions.trafficSource.length > 0) {
+            if (conditions.trafficSource.indexOf(context.trafficSource) !== -1) return true;
+        }
+
+        return false;
+    }
+
+    // --- 产品相关性判断 ---
+
+    function isProductRelevant(handle, meta, action) {
+        var relevantTags = action.relevantTags;
+        var relevantKeywords = action.relevantKeywords;
+
+        // null = 不过滤（显示全部）
+        if (!relevantTags || relevantTags.length === 0) return true;
+
+        // 1) Tag 匹配（主要信号）
+        if (meta && meta.tags && meta.tags.length > 0) {
+            var tagMatch = relevantTags.some(function (rt) {
+                return meta.tags.indexOf(rt) !== -1;
+            });
+            if (tagMatch) return true;
+        }
+
+        // 2) Handle/title 关键词匹配（无 tag 时的兜底）
+        if (relevantKeywords && relevantKeywords.length > 0) {
+            var searchStr = (handle || '') + ' ' + (meta && meta.title ? meta.title : '');
+            searchStr = searchStr.toLowerCase();
+            var kwMatch = relevantKeywords.some(function (kw) {
+                return searchStr.indexOf(kw) !== -1;
+            });
+            if (kwMatch) return true;
+        }
+
+        // 3) 无数据可判断 → 保守显示
+        if (!meta || (!meta.tags || meta.tags.length === 0)) return true;
+
+        return false;
+    }
+
+    // --- 产品过滤（白名单模式） ---
+
+    function filterByRelevance(cards, productMeta, action) {
+        if (!action.relevantTags || action.relevantTags.length === 0) {
+            return { visibleCards: cards.slice(), hiddenHandles: [] };
+        }
+
+        var relevant = [];
+        var irrelevant = [];
+
+        cards.forEach(function (card) {
+            var handle = getProductHandleFromCard(card);
+            var meta = handle ? productMeta[handle] : null;
+
+            if (isProductRelevant(handle, meta, action)) {
+                relevant.push({ card: card, handle: handle });
+            } else {
+                irrelevant.push({ card: card, handle: handle });
+            }
+        });
+
+        // 安全阀：相关产品太少则不过滤
+        var MIN_VISIBLE = 2;
+        if (relevant.length < MIN_VISIBLE) {
+            log('[AI-LP] Only', relevant.length, 'relevant products (min:', MIN_VISIBLE + '), skipping filter');
+            return { visibleCards: cards.slice(), hiddenHandles: [] };
+        }
+
+        // 隐藏不相关产品（同时隐藏 grid item，避免在 CSS grid 中留空位）
+        var hiddenHandles = [];
+        irrelevant.forEach(function (item) {
+            item.card.classList.add('ai-lp-hidden');
+            var unit = getReorderableUnit(item.card);
+            if (unit !== item.card) unit.classList.add('ai-lp-hidden');
+            if (item.handle) hiddenHandles.push(item.handle);
+        });
+
+        // 确保相关产品可见
+        relevant.forEach(function (item) {
+            item.card.classList.remove('ai-lp-hidden');
+            var unit = getReorderableUnit(item.card);
+            if (unit !== item.card) unit.classList.remove('ai-lp-hidden');
+        });
+
+        log('[AI-LP] Filtered:', relevant.length, 'visible,', irrelevant.length, 'hidden');
+        return {
+            visibleCards: relevant.map(function (r) { return r.card; }),
+            hiddenHandles: hiddenHandles,
+        };
+    }
+
+    // --- 产品排序 ---
+
+    function reorderByRelevance(cards, productMeta, action) {
+        var boostTags = action.boostTags;
+        if (!boostTags || boostTags.length === 0) return;
+        if (cards.length <= 1) return;
+
+        var scored = cards.map(function (card, originalIndex) {
+            var handle = getProductHandleFromCard(card);
+            var meta = handle ? productMeta[handle] : null;
+            var tags = (meta && meta.tags) ? meta.tags : [];
+            var score = 0;
+
+            boostTags.forEach(function (bt, priority) {
+                var matched = tags.some(function (t) {
+                    return t.indexOf(bt) !== -1 || bt.indexOf(t) !== -1;
+                });
+                if (matched) {
+                    score += (boostTags.length - priority) * 10;
+                }
+            });
+
+            return { card: card, score: score, originalIndex: originalIndex };
+        });
+
+        scored.sort(function (a, b) {
+            if (a.score !== b.score) return b.score - a.score;
+            return a.originalIndex - b.originalIndex;
+        });
+
+        // DOM 重排
+        var container = findCardsContainer(cards);
+        if (!container) return;
+
+        // 找到每个卡片的可重排单元（可能是 <li> 而非卡片本身）
+        var units = scored.map(function (s) { return getReorderableUnit(s.card); });
+
+        // 使用 insertBefore 按顺序移动，避免破坏 DOM 结构
+        for (var i = 0; i < units.length; i++) {
+            container.appendChild(units[i]);
+        }
+
+        log('[AI-LP] Reordered', scored.length, 'products');
+    }
+
+    function findCardsContainer(cards) {
+        if (cards.length === 0) return null;
+
+        // 获取每个卡片的可重排单元的父元素
+        var units = cards.map(function (c) { return getReorderableUnit(c); });
+        var parentCounts = new Map();
+
+        units.forEach(function (unit) {
+            var parent = unit.parentElement;
+            if (parent) {
+                parentCounts.set(parent, (parentCounts.get(parent) || 0) + 1);
+            }
+        });
+
+        var best = null;
+        var bestCount = 0;
+        parentCounts.forEach(function (count, parent) {
+            if (count > bestCount) {
+                bestCount = count;
+                best = parent;
+            }
+        });
+
+        return best;
+    }
+
+    function getReorderableUnit(card) {
+        // 在 Dawn 主题中，卡片结构通常是：
+        // <ul class="grid product-grid">
+        //   <li class="grid__item">
+        //     <div class="card-wrapper">...</div>  ← findProductCards() 返回的
+        //   </li>
+        // </ul>
+        // 我们需要移动 <li>，不是 <div>
+        var current = card;
+        for (var i = 0; i < 5 && current.parentElement; i++) {
+            var parent = current.parentElement;
+            var tag = parent.tagName.toLowerCase();
+            if (tag === 'ul' || tag === 'ol' ||
+                parent.classList.contains('grid') ||
+                parent.classList.contains('product-grid') ||
+                parent.classList.contains('collection-product-list') ||
+                parent.classList.contains('product-list')) {
+                return current; // current 是这个容器的直接子元素
+            }
+            current = parent;
+        }
+        // 兜底：返回卡片的直接父元素
+        return card.parentElement || card;
+    }
+
+    // --- 布局缓存与恢复 ---
+
+    function getUtmFingerprint() {
+        var utm = getUtmParams();
+        return [utm.utmSource || '', utm.utmCampaign || '', utm.utmContent || ''].join('|');
+    }
+
+    function cacheLayoutDecision(decision) {
+        try {
+            sessionStorage.setItem(LP_CACHE_KEY, JSON.stringify({
+                ruleId: decision.ruleId,
+                productOrder: decision.productOrder,
+                hiddenProducts: decision.hiddenProducts,
+                utmFingerprint: decision.utmFingerprint,
+                timestamp: Date.now(),
+            }));
+        } catch (e) {
+            log('[AI-LP] Cache write failed:', e);
+        }
+    }
+
+    function restoreLayoutDecision() {
+        try {
+            var raw = sessionStorage.getItem(LP_CACHE_KEY);
+            if (!raw) return null;
+            var state = JSON.parse(raw);
+
+            // UTM 一致性校验
+            if (state.utmFingerprint !== getUtmFingerprint()) {
+                sessionStorage.removeItem(LP_CACHE_KEY);
+                return null;
+            }
+            // TTL 校验
+            if (Date.now() - state.timestamp > LP_CACHE_TTL) {
+                sessionStorage.removeItem(LP_CACHE_KEY);
+                return null;
+            }
+            return state;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function restoreFromCache(cards, cached) {
+        // 恢复排序
+        if (cached.productOrder && cached.productOrder.length > 0) {
+            var container = findCardsContainer(cards);
+            if (container) {
+                var unitMap = new Map();
+                cards.forEach(function (card) {
+                    var handle = getProductHandleFromCard(card);
+                    if (handle) unitMap.set(handle, getReorderableUnit(card));
+                });
+
+                var placed = {};
+                // 先按缓存顺序放
+                cached.productOrder.forEach(function (handle) {
+                    var unit = unitMap.get(handle);
+                    if (unit) {
+                        container.appendChild(unit);
+                        placed[handle] = true;
+                    }
+                });
+                // 再放缓存中没有的（新产品）
+                cards.forEach(function (card) {
+                    var handle = getProductHandleFromCard(card);
+                    if (handle && !placed[handle]) {
+                        container.appendChild(getReorderableUnit(card));
+                    }
+                });
+            }
+        }
+
+        // 恢复显隐（同时处理 grid item）
+        if (cached.hiddenProducts && cached.hiddenProducts.length > 0) {
+            var hiddenSet = {};
+            cached.hiddenProducts.forEach(function (h) { hiddenSet[h] = true; });
+
+            cards.forEach(function (card) {
+                var handle = getProductHandleFromCard(card);
+                var unit = getReorderableUnit(card);
+                if (handle && hiddenSet[handle]) {
+                    card.classList.add('ai-lp-hidden');
+                    if (unit !== card) unit.classList.add('ai-lp-hidden');
+                } else {
+                    card.classList.remove('ai-lp-hidden');
+                    if (unit !== card) unit.classList.remove('ai-lp-hidden');
+                }
+            });
+        }
+
+        log('[AI-LP] Restored from cache:', cached.ruleId);
+    }
+
+    // --- 主入口 ---
+
+    async function applyLandingPersonalization() {
+        try {
+            // 仅首页执行
+            var path = window.location.pathname;
+            if (path !== '/' && path !== '') return;
+
+            var cards = findProductCards();
+            if (!cards || cards.length === 0) return;
+
+            var container = findCardsContainer(cards);
+            if (!container) {
+                log('[AI-LP] No card container found, skipping');
+                return;
+            }
+
+            // === 缓存快速路径 ===
+            var cached = restoreLayoutDecision();
+            if (cached) {
+                var appliedRule = container.getAttribute('data-ai-lp-applied');
+                if (appliedRule === cached.ruleId) {
+                    log('[AI-LP] Already applied:', cached.ruleId, '- skipping');
+                    return;
+                }
+                restoreFromCache(cards, cached);
+                container.setAttribute('data-ai-lp-applied', cached.ruleId);
+                return;
+            }
+
+            // === 计算路径 ===
+            log('[AI-LP] Computing personalization...');
+
+            var context = buildLayoutContext();
+            var result = selectPersonalizationRule(context);
+            var ruleId = result.ruleId;
+            var action = result.action;
+
+            log('[AI-LP] Context:', context);
+            log('[AI-LP] Matched rule:', ruleId, '(' + result.matchType + ')');
+
+            // 默认规则且无 boost → 跳过（页面保持原样）
+            if (ruleId === 'default') {
+                container.setAttribute('data-ai-lp-applied', 'default');
+                log('[AI-LP] Default rule, no changes needed');
+                return;
+            }
+
+            // 等待产品元数据（带超时保护）
+            var productMeta = _productMetaCache;
+            if (!productMeta) {
+                productMeta = await Promise.race([
+                    _productMetaPromise || Promise.resolve({}),
+                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 500); }),
+                ]);
+                if (!productMeta) {
+                    log('[AI-LP] Product meta timeout, using handle inference fallback');
+                    productMeta = {};
+                }
+            }
+
+            // 过滤
+            var filterResult = filterByRelevance(cards, productMeta, action);
+            var visibleCards = filterResult.visibleCards;
+            var hiddenHandles = filterResult.hiddenHandles;
+
+            // 排序（只对可见卡片排序）
+            reorderByRelevance(visibleCards, productMeta, action);
+
+            // 收集排序后的顺序
+            var orderedHandles = visibleCards.map(function (c) {
+                return getProductHandleFromCard(c);
+            }).filter(Boolean);
+
+            // 标记 + 缓存
+            container.setAttribute('data-ai-lp-applied', ruleId);
+            cacheLayoutDecision({
+                ruleId: ruleId,
+                productOrder: orderedHandles,
+                hiddenProducts: hiddenHandles,
+                utmFingerprint: getUtmFingerprint(),
+            });
+
+            log('[AI-LP] ✅ Personalization applied: rule=' + ruleId +
+                ', visible=' + visibleCards.length +
+                ', hidden=' + hiddenHandles.length);
+
+        } catch (err) {
+            // 降级：任何错误不影响页面正常展示
+            log('[AI-LP] ❌ Error (graceful degradation):', err);
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('[AI-LP] Personalization error:', err);
+            }
+        }
+    }
+
+    // =====================
     // 入口
     // =====================
 
@@ -1504,11 +2127,18 @@
 
         // 首页或集合页：处理产品卡片、Banner、Collection、Image with Text
         if (isHomePage || isCollectionPage || !isProductPage) {
-            tasks.push(processAllProductCards());
+            if (isHomePage) {
+                // ★ 首页：先执行个性化（过滤/排序），再生成图片
+                // 个性化完成后才开始 processAllProductCards，确保隐藏的卡片不浪费 API
+                tasks.push(
+                    applyLandingPersonalization().then(() => processAllProductCards())
+                );
+            } else {
+                tasks.push(processAllProductCards());
+            }
             tasks.push(processBannerImages());
             tasks.push(processCollectionImages());      // Collection 图片
             tasks.push(processImageWithTextImages());   // Image with Text 图片
-            // 全部并行执行！
         }
 
         // 产品详情页：处理详情图
