@@ -1,1 +1,3 @@
 # shopify-ai-script
+
+intro
